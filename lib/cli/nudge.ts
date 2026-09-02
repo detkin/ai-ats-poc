@@ -165,9 +165,7 @@ function describeCheck(check: TlNudgePolicyCheck): string[] {
 }
 
 /** Locate the task's signal by ticking `detect` over its cycle. */
-async function signalForTask(
-  taskId: string,
-): Promise<{
+async function signalForTask(taskId: string): Promise<{
   rt: Runtime;
   config: Config;
   cycle: TlCycle;
