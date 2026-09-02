@@ -1,0 +1,50 @@
+# Talent Loops — tenant policy for Acme Robotics.
+#
+# This file is the tenant layer (DATA_CONTRACT: engine updates never rewrite it).
+# It is DATA, not prompt: `lib/policy` loads and validates it, the engine reads it,
+# and `modes/_tenant.md` is prose generated over these values. Spec §5, §7, §8; plan §2.6.
+#
+# `bin/doctor.mjs` refuses to tick while `template: true`.
+
+template: false
+
+tenant:
+  name: Acme Robotics
+  acting_identity_default: hrbp
+
+cadence:
+  tick_interval_hours: 24
+  nudge_min_gap_hours: 48
+  max_attempts: 3
+
+quiet_hours:
+  respect_location_hours: true
+  weekends: true
+  holidays: true
+
+channels:
+  nudge: slack_dm
+  escalation: slack_dm
+  summary: slack_channel
+  summary_channel: '#people-ops'
+
+escalation:
+  overdue_days: 3
+  after_attempts: 2
+  escalate_to: cycle_owner
+
+absence:
+  move_due_date_days_after_return: 2
+  skip_nudge: true
+
+review_cycle:
+  stagger_days:
+    self: 0
+    peer: 7
+    manager: 14
+  peers_per_subject: 2
+
+interview_loop:
+  panel_size: 4
+  scorecard_due_hours: 24
+  substitute_same_level: true

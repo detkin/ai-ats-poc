@@ -1,0 +1,78 @@
+# Talent Loops — tenant policy TEMPLATE.
+#
+# Copy this file to `tenant/policy.yml`, replace every placeholder with the tenant's
+# real numbers, and set `template: false`. `bin/doctor.mjs` reports a `fail` while
+# `template: true` so the engine never nudges a stranger on a template's cadence
+# (spec §5, "doctor.mjs refuses to tick with a template policy").
+#
+# Every key below is required; the loader (`lib/policy/load.ts`) rejects missing
+# sections, unknown keys (typo protection) and out-of-range numbers.
+
+# Marks this policy as unpersonalized. Must be `false` before a real run.
+template: true
+
+tenant:
+  # Display name of the tenant, used in packet and nudge headers.
+  name: Your Company
+  # Which seeded identity acts by default (see fixtures/tenant/identities.json):
+  # hrbp | recruiter | manager | employee.
+  acting_identity_default: hrbp
+
+cadence:
+  # How often a scheduled tick runs for a cycle. Must be > 0.
+  tick_interval_hours: 24
+  # Minimum quiet gap between two nudges for the same task. Must be >= 0.
+  nudge_min_gap_hours: 48
+  # How many nudges a task may receive before the engine escalates instead. Must be >= 1.
+  max_attempts: 3
+
+quiet_hours:
+  # Respect each recipient's location work hours (Location.work_hours) when nudging.
+  respect_location_hours: true
+  # Never nudge on a Saturday or Sunday.
+  weekends: true
+  # Never nudge on a holiday for the recipient's location.
+  holidays: true
+
+channels:
+  # Where routine task nudges go: slack_dm | slack_channel.
+  nudge: slack_dm
+  # Where escalations go: slack_dm | slack_channel.
+  escalation: slack_dm
+  # Where cycle summaries go: slack_dm | slack_channel.
+  summary: slack_channel
+  # The channel used when a delivery above is `slack_channel`. Must start with '#'.
+  summary_channel: '#your-channel'
+
+escalation:
+  # Days past `due_at` before a task is escalation-eligible. Must be >= 0.
+  overdue_days: 3
+  # Nudge attempts after which the engine proposes an escalation. Must be >= 0.
+  after_attempts: 2
+  # Who the escalation is addressed to: cycle_owner | department_head.
+  escalate_to: cycle_owner
+
+absence:
+  # When a participant is absent, move `due_at` to this many days after their return.
+  # Must be >= 0. `original_due_at` never changes.
+  move_due_date_days_after_return: 2
+  # Never nudge someone Rippling reports as absent (absence is authoritative, spec §4).
+  skip_nudge: true
+
+review_cycle:
+  # Days after `opened_at` that each review kind becomes due.
+  # Must be non-negative and non-decreasing: self <= peer <= manager.
+  stagger_days:
+    self: 0
+    peer: 7
+    manager: 14
+  # How many peer reviewers each subject gets. Must be >= 1.
+  peers_per_subject: 2
+
+interview_loop:
+  # Interviewers on a full onsite panel. Must be >= 1.
+  panel_size: 4
+  # Hours after the interview by which a scorecard is due. Must be > 0.
+  scorecard_due_hours: 24
+  # Substitute a declining interviewer with a same-level peer (spec §8 loop 2).
+  substitute_same_level: true
