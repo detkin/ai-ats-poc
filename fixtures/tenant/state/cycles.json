@@ -1,0 +1,25 @@
+[
+  {
+    "id": "tl_cycle_h2_2026",
+    "created_at": "2026-08-24T00:00:00Z",
+    "updated_at": "2026-08-24T00:00:00Z",
+    "created_by": "w_0021",
+    "type": "review",
+    "name": "H2 2026 Mid-Year Review",
+    "status": "configured",
+    "owner_worker_id": "w_0021",
+    "deadline": "2026-09-18T23:59:59Z",
+    "policy_ref": "tenant/policy.yml",
+    "opened_at": null,
+    "scope": {
+      "department_ids": [
+        "dept_eng",
+        "dept_product",
+        "dept_design",
+        "dept_sales",
+        "dept_cs",
+        "dept_ga"
+      ]
+    }
+  }
+]

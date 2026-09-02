@@ -1,0 +1,138 @@
+[
+  {
+    "id": "abs_0001",
+    "worker_id": "w_0009",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-08-31",
+    "end_date": "2026-09-03",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0002",
+    "worker_id": "w_0015",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-08-24",
+    "end_date": "2026-09-08",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0003",
+    "worker_id": "w_0033",
+    "leave_type_id": "lt_parental",
+    "start_date": "2026-07-13",
+    "end_date": "2026-10-31",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0004",
+    "worker_id": "w_0041",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-09-01",
+    "end_date": "2026-09-04",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0005",
+    "worker_id": "w_0058",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-09-01",
+    "end_date": "2026-09-03",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0006",
+    "worker_id": "w_0067",
+    "leave_type_id": "lt_sick",
+    "start_date": "2026-09-02",
+    "end_date": "2026-09-02",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0007",
+    "worker_id": "w_0085",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-08-28",
+    "end_date": "2026-09-07",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0008",
+    "worker_id": "w_0104",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-09-02",
+    "end_date": "2026-09-11",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0009",
+    "worker_id": "w_0119",
+    "leave_type_id": "lt_sabbatical",
+    "start_date": "2026-08-03",
+    "end_date": "2026-09-25",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0010",
+    "worker_id": "w_0072",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-09-01",
+    "end_date": "2026-09-05",
+    "status": "PENDING"
+  },
+  {
+    "id": "abs_0011",
+    "worker_id": "w_0093",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-08-30",
+    "end_date": "2026-09-06",
+    "status": "PENDING"
+  },
+  {
+    "id": "abs_0012",
+    "worker_id": "w_0009",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-06-15",
+    "end_date": "2026-06-19",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0013",
+    "worker_id": "w_0028",
+    "leave_type_id": "lt_sick",
+    "start_date": "2026-04-06",
+    "end_date": "2026-04-07",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0014",
+    "worker_id": "w_0077",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-07-06",
+    "end_date": "2026-07-17",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0015",
+    "worker_id": "w_0007",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-09-21",
+    "end_date": "2026-09-25",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0016",
+    "worker_id": "w_0021",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-11-23",
+    "end_date": "2026-11-27",
+    "status": "APPROVED"
+  },
+  {
+    "id": "abs_0017",
+    "worker_id": "w_0114",
+    "leave_type_id": "lt_pto",
+    "start_date": "2026-12-21",
+    "end_date": "2026-12-31",
+    "status": "PENDING"
+  }
+]

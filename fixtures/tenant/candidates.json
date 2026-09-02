@@ -1,0 +1,324 @@
+[
+  {
+    "id": "cand_0001",
+    "first_name": "Cassian",
+    "last_name": "Petrakis",
+    "email": "cassian.petrakis@candidates.acme-robotics.example",
+    "source": "sourced",
+    "resume_ref": "resumes/cand_0001.md"
+  },
+  {
+    "id": "cand_0002",
+    "first_name": "Ziva",
+    "last_name": "Laurent",
+    "email": "ziva.laurent@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0002.md"
+  },
+  {
+    "id": "cand_0003",
+    "first_name": "Imani",
+    "last_name": "Aguilar",
+    "email": "imani.aguilar@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0003.md"
+  },
+  {
+    "id": "cand_0004",
+    "first_name": "Dara",
+    "last_name": "Eze",
+    "email": "dara.eze@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0004.md"
+  },
+  {
+    "id": "cand_0005",
+    "first_name": "Padma",
+    "last_name": "Laurent",
+    "email": "padma.laurent@candidates.acme-robotics.example",
+    "source": "referral",
+    "referred_by_worker_id": "w_0025",
+    "resume_ref": "resumes/cand_0005.md"
+  },
+  {
+    "id": "cand_0006",
+    "first_name": "Renata",
+    "last_name": "Guzman",
+    "email": "renata.guzman@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0006.md"
+  },
+  {
+    "id": "cand_0007",
+    "first_name": "Nadine",
+    "last_name": "Okafor",
+    "email": "nadine.okafor@candidates.acme-robotics.example",
+    "source": "sourced",
+    "resume_ref": "resumes/cand_0007.md"
+  },
+  {
+    "id": "cand_0008",
+    "first_name": "Nadine",
+    "last_name": "Radcliffe",
+    "email": "nadine.radcliffe@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0008.md"
+  },
+  {
+    "id": "cand_0009",
+    "first_name": "Wren",
+    "last_name": "Okafor",
+    "email": "wren.okafor@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0009.md"
+  },
+  {
+    "id": "cand_0010",
+    "first_name": "Ulani",
+    "last_name": "Maddox",
+    "email": "ulani.maddox@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0010.md"
+  },
+  {
+    "id": "cand_0011",
+    "first_name": "Oscar",
+    "last_name": "Baptiste",
+    "email": "oscar.baptiste@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0011.md"
+  },
+  {
+    "id": "cand_0012",
+    "first_name": "Hiroshi",
+    "last_name": "Dubois",
+    "email": "hiroshi.dubois@candidates.acme-robotics.example",
+    "source": "referral",
+    "referred_by_worker_id": "w_0086",
+    "resume_ref": "resumes/cand_0012.md"
+  },
+  {
+    "id": "cand_0013",
+    "first_name": "Wren",
+    "last_name": "Sepulveda",
+    "email": "wren.sepulveda@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0013.md"
+  },
+  {
+    "id": "cand_0014",
+    "first_name": "Ziva",
+    "last_name": "Bhandari",
+    "email": "ziva.bhandari@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0014.md"
+  },
+  {
+    "id": "cand_0015",
+    "first_name": "Marcus",
+    "last_name": "Cabrera",
+    "email": "marcus.cabrera@candidates.acme-robotics.example",
+    "source": "sourced",
+    "resume_ref": "resumes/cand_0015.md"
+  },
+  {
+    "id": "cand_0016",
+    "first_name": "Padma",
+    "last_name": "Achebe",
+    "email": "padma.achebe@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0016.md"
+  },
+  {
+    "id": "cand_0017",
+    "first_name": "Wren",
+    "last_name": "Cabrera",
+    "email": "wren.cabrera@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0017.md"
+  },
+  {
+    "id": "cand_0018",
+    "first_name": "Oscar",
+    "last_name": "Whitmore",
+    "email": "oscar.whitmore@candidates.acme-robotics.example",
+    "source": "sourced",
+    "resume_ref": "resumes/cand_0018.md"
+  },
+  {
+    "id": "cand_0019",
+    "first_name": "Padma",
+    "last_name": "Mensah",
+    "email": "padma.mensah@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0019.md"
+  },
+  {
+    "id": "cand_0020",
+    "first_name": "Padma",
+    "last_name": "Aguilar",
+    "email": "padma.aguilar@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0020.md"
+  },
+  {
+    "id": "cand_0021",
+    "first_name": "Imani",
+    "last_name": "Sandberg",
+    "email": "imani.sandberg@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0021.md"
+  },
+  {
+    "id": "cand_0022",
+    "first_name": "Tobias",
+    "last_name": "Kobayashi",
+    "email": "tobias.kobayashi@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0022.md"
+  },
+  {
+    "id": "cand_0023",
+    "first_name": "Padma",
+    "last_name": "Eze",
+    "email": "padma.eze@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0023.md"
+  },
+  {
+    "id": "cand_0024",
+    "first_name": "Xiomara",
+    "last_name": "Achebe",
+    "email": "xiomara.achebe@candidates.acme-robotics.example",
+    "source": "sourced",
+    "resume_ref": "resumes/cand_0024.md"
+  },
+  {
+    "id": "cand_0025",
+    "first_name": "Diego",
+    "last_name": "Whitmore",
+    "email": "diego.whitmore@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0025.md"
+  },
+  {
+    "id": "cand_0026",
+    "first_name": "Fiona",
+    "last_name": "Baptiste",
+    "email": "fiona.baptiste@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0026.md"
+  },
+  {
+    "id": "cand_0027",
+    "first_name": "Salma",
+    "last_name": "Varga",
+    "email": "salma.varga@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0027.md"
+  },
+  {
+    "id": "cand_0028",
+    "first_name": "Laila",
+    "last_name": "Sepulveda",
+    "email": "laila.sepulveda@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0028.md"
+  },
+  {
+    "id": "cand_0029",
+    "first_name": "Noor",
+    "last_name": "Quiroga",
+    "email": "noor.quiroga@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0029.md"
+  },
+  {
+    "id": "cand_0030",
+    "first_name": "Laila",
+    "last_name": "Eze",
+    "email": "laila.eze@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0030.md"
+  },
+  {
+    "id": "cand_0031",
+    "first_name": "Arjun",
+    "last_name": "Ibarra",
+    "email": "arjun.ibarra@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0031.md"
+  },
+  {
+    "id": "cand_0032",
+    "first_name": "Magda",
+    "last_name": "Eze",
+    "email": "magda.eze@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0032.md"
+  },
+  {
+    "id": "cand_0033",
+    "first_name": "Bianca",
+    "last_name": "Radcliffe",
+    "email": "bianca.radcliffe@candidates.acme-robotics.example",
+    "source": "sourced",
+    "resume_ref": "resumes/cand_0033.md"
+  },
+  {
+    "id": "cand_0034",
+    "first_name": "Cecilia",
+    "last_name": "Laurent",
+    "email": "cecilia.laurent@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0034.md"
+  },
+  {
+    "id": "cand_0035",
+    "first_name": "Dara",
+    "last_name": "Ubaldi",
+    "email": "dara.ubaldi@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0035.md"
+  },
+  {
+    "id": "cand_0036",
+    "first_name": "Imani",
+    "last_name": "Varga",
+    "email": "imani.varga@candidates.acme-robotics.example",
+    "source": "agency",
+    "resume_ref": "resumes/cand_0036.md"
+  },
+  {
+    "id": "cand_0037",
+    "first_name": "Gideon",
+    "last_name": "Fontaine",
+    "email": "gideon.fontaine@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0037.md"
+  },
+  {
+    "id": "cand_0038",
+    "first_name": "Rohan",
+    "last_name": "Nakashima",
+    "email": "rohan.nakashima@candidates.acme-robotics.example",
+    "source": "sourced",
+    "resume_ref": "resumes/cand_0038.md"
+  },
+  {
+    "id": "cand_0039",
+    "first_name": "Gideon",
+    "last_name": "Sepulveda",
+    "email": "gideon.sepulveda@candidates.acme-robotics.example",
+    "source": "inbound",
+    "resume_ref": "resumes/cand_0039.md"
+  },
+  {
+    "id": "cand_0040",
+    "first_name": "Farrah",
+    "last_name": "Maddox",
+    "email": "farrah.maddox@candidates.acme-robotics.example",
+    "source": "sourced",
+    "resume_ref": "resumes/cand_0040.md"
+  }
+]

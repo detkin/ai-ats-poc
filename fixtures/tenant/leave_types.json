@@ -1,0 +1,18 @@
+[
+  {
+    "id": "lt_pto",
+    "name": "PTO"
+  },
+  {
+    "id": "lt_sick",
+    "name": "Sick"
+  },
+  {
+    "id": "lt_parental",
+    "name": "Parental"
+  },
+  {
+    "id": "lt_sabbatical",
+    "name": "Sabbatical"
+  }
+]

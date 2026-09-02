@@ -1,0 +1,56 @@
+[
+  {
+    "id": "lvl_L3",
+    "name": "L3",
+    "track": "IC",
+    "rank": 3
+  },
+  {
+    "id": "lvl_L4",
+    "name": "L4",
+    "track": "IC",
+    "rank": 4
+  },
+  {
+    "id": "lvl_L5",
+    "name": "L5",
+    "track": "IC",
+    "rank": 5
+  },
+  {
+    "id": "lvl_L6",
+    "name": "L6",
+    "track": "IC",
+    "rank": 6
+  },
+  {
+    "id": "lvl_L7",
+    "name": "L7",
+    "track": "IC",
+    "rank": 7
+  },
+  {
+    "id": "lvl_M1",
+    "name": "M1",
+    "track": "M",
+    "rank": 5
+  },
+  {
+    "id": "lvl_M2",
+    "name": "M2",
+    "track": "M",
+    "rank": 6
+  },
+  {
+    "id": "lvl_M3",
+    "name": "M3",
+    "track": "M",
+    "rank": 7
+  },
+  {
+    "id": "lvl_E1",
+    "name": "E1",
+    "track": "E",
+    "rank": 8
+  }
+]

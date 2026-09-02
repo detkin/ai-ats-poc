@@ -1,0 +1,56 @@
+[
+  {
+    "id": "hol_us_labor_day_2026_sf",
+    "location_id": "loc_sf",
+    "date": "2026-09-07",
+    "name": "Labor Day"
+  },
+  {
+    "id": "hol_us_labor_day_2026_nyc",
+    "location_id": "loc_nyc",
+    "date": "2026-09-07",
+    "name": "Labor Day"
+  },
+  {
+    "id": "hol_us_labor_day_2026_remote_us",
+    "location_id": "loc_remote_us",
+    "date": "2026-09-07",
+    "name": "Labor Day"
+  },
+  {
+    "id": "hol_us_thanksgiving_2026_sf",
+    "location_id": "loc_sf",
+    "date": "2026-11-26",
+    "name": "Thanksgiving Day"
+  },
+  {
+    "id": "hol_us_thanksgiving_2026_nyc",
+    "location_id": "loc_nyc",
+    "date": "2026-11-26",
+    "name": "Thanksgiving Day"
+  },
+  {
+    "id": "hol_us_thanksgiving_2026_remote_us",
+    "location_id": "loc_remote_us",
+    "date": "2026-11-26",
+    "name": "Thanksgiving Day"
+  },
+  {
+    "id": "hol_in_independence_day_2026_blr",
+    "location_id": "loc_blr",
+    "date": "2026-08-15",
+    "name": "Independence Day"
+  },
+  {
+    "id": "hol_in_gandhi_jayanti_2026_blr",
+    "location_id": "loc_blr",
+    "date": "2026-10-02",
+    "name": "Gandhi Jayanti"
+  },
+  {
+    "id": "hol_in_diwali_2026_blr",
+    "location_id": "loc_blr",
+    "date": "2026-11-08",
+    "name": "Diwali"
+  }
+]

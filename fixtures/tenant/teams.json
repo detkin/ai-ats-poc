@@ -1,0 +1,104 @@
+[
+  {
+    "id": "team_exec",
+    "name": "Executive",
+    "department_id": "dept_ga",
+    "lead_worker_id": "w_0001"
+  },
+  {
+    "id": "team_platform",
+    "name": "Platform",
+    "department_id": "dept_eng",
+    "lead_worker_id": "w_0007"
+  },
+  {
+    "id": "team_product_eng",
+    "name": "Product Engineering",
+    "department_id": "dept_eng",
+    "lead_worker_id": "w_0008"
+  },
+  {
+    "id": "team_infra",
+    "name": "Infrastructure",
+    "department_id": "dept_eng",
+    "lead_worker_id": "w_0009"
+  },
+  {
+    "id": "team_data",
+    "name": "Data",
+    "department_id": "dept_eng",
+    "lead_worker_id": "w_0010"
+  },
+  {
+    "id": "team_mobile",
+    "name": "Mobile",
+    "department_id": "dept_eng",
+    "lead_worker_id": "w_0011"
+  },
+  {
+    "id": "team_product_core",
+    "name": "Core Product",
+    "department_id": "dept_product",
+    "lead_worker_id": "w_0012"
+  },
+  {
+    "id": "team_product_growth",
+    "name": "Growth Product",
+    "department_id": "dept_product",
+    "lead_worker_id": "w_0013"
+  },
+  {
+    "id": "team_design",
+    "name": "Product Design",
+    "department_id": "dept_design",
+    "lead_worker_id": "w_0014"
+  },
+  {
+    "id": "team_sales_enterprise",
+    "name": "Enterprise Sales",
+    "department_id": "dept_sales",
+    "lead_worker_id": "w_0015"
+  },
+  {
+    "id": "team_sales_midmarket",
+    "name": "Mid-Market Sales",
+    "department_id": "dept_sales",
+    "lead_worker_id": "w_0016"
+  },
+  {
+    "id": "team_sales_smb",
+    "name": "SMB Sales",
+    "department_id": "dept_sales",
+    "lead_worker_id": "w_0017"
+  },
+  {
+    "id": "team_cs_enterprise",
+    "name": "Enterprise Customer Success",
+    "department_id": "dept_cs",
+    "lead_worker_id": "w_0018"
+  },
+  {
+    "id": "team_cs_smb",
+    "name": "SMB Customer Success",
+    "department_id": "dept_cs",
+    "lead_worker_id": "w_0019"
+  },
+  {
+    "id": "team_finance",
+    "name": "Finance",
+    "department_id": "dept_ga",
+    "lead_worker_id": "w_0020"
+  },
+  {
+    "id": "team_people",
+    "name": "People",
+    "department_id": "dept_ga",
+    "lead_worker_id": "w_0021"
+  },
+  {
+    "id": "team_legal",
+    "name": "Legal & Workplace",
+    "department_id": "dept_ga",
+    "lead_worker_id": "w_0022"
+  }
+]

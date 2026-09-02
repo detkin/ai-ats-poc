@@ -1,0 +1,578 @@
+[
+  {
+    "worker_id": "w_0002",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0001"
+  },
+  {
+    "worker_id": "w_0003",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0001"
+  },
+  {
+    "worker_id": "w_0004",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0001"
+  },
+  {
+    "worker_id": "w_0005",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0001"
+  },
+  {
+    "worker_id": "w_0006",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0001"
+  },
+  {
+    "worker_id": "w_0007",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0002"
+  },
+  {
+    "worker_id": "w_0008",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0002"
+  },
+  {
+    "worker_id": "w_0009",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0002"
+  },
+  {
+    "worker_id": "w_0010",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0002"
+  },
+  {
+    "worker_id": "w_0011",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 2,
+    "rated_by_worker_id": "w_0002"
+  },
+  {
+    "worker_id": "w_0012",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0003"
+  },
+  {
+    "worker_id": "w_0013",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0003"
+  },
+  {
+    "worker_id": "w_0014",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0004"
+  },
+  {
+    "worker_id": "w_0015",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0005"
+  },
+  {
+    "worker_id": "w_0016",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0005"
+  },
+  {
+    "worker_id": "w_0017",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0005"
+  },
+  {
+    "worker_id": "w_0018",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0006"
+  },
+  {
+    "worker_id": "w_0019",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0006"
+  },
+  {
+    "worker_id": "w_0020",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0001"
+  },
+  {
+    "worker_id": "w_0021",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0001"
+  },
+  {
+    "worker_id": "w_0022",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0001"
+  },
+  {
+    "worker_id": "w_0023",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0007"
+  },
+  {
+    "worker_id": "w_0025",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 1,
+    "rated_by_worker_id": "w_0007"
+  },
+  {
+    "worker_id": "w_0026",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0007"
+  },
+  {
+    "worker_id": "w_0027",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0007"
+  },
+  {
+    "worker_id": "w_0028",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0007"
+  },
+  {
+    "worker_id": "w_0029",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0007"
+  },
+  {
+    "worker_id": "w_0030",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0007"
+  },
+  {
+    "worker_id": "w_0031",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0007"
+  },
+  {
+    "worker_id": "w_0032",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0008"
+  },
+  {
+    "worker_id": "w_0033",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0008"
+  },
+  {
+    "worker_id": "w_0034",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0008"
+  },
+  {
+    "worker_id": "w_0035",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0008"
+  },
+  {
+    "worker_id": "w_0036",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0008"
+  },
+  {
+    "worker_id": "w_0037",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0008"
+  },
+  {
+    "worker_id": "w_0038",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0008"
+  },
+  {
+    "worker_id": "w_0039",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0008"
+  },
+  {
+    "worker_id": "w_0040",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0009"
+  },
+  {
+    "worker_id": "w_0041",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0009"
+  },
+  {
+    "worker_id": "w_0042",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0009"
+  },
+  {
+    "worker_id": "w_0044",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0009"
+  },
+  {
+    "worker_id": "w_0045",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0009"
+  },
+  {
+    "worker_id": "w_0046",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0009"
+  },
+  {
+    "worker_id": "w_0047",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0009"
+  },
+  {
+    "worker_id": "w_0048",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0010"
+  },
+  {
+    "worker_id": "w_0050",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 2,
+    "rated_by_worker_id": "w_0010"
+  },
+  {
+    "worker_id": "w_0051",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0010"
+  },
+  {
+    "worker_id": "w_0052",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0010"
+  },
+  {
+    "worker_id": "w_0053",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0010"
+  },
+  {
+    "worker_id": "w_0054",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0010"
+  },
+  {
+    "worker_id": "w_0055",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0011"
+  },
+  {
+    "worker_id": "w_0056",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0011"
+  },
+  {
+    "worker_id": "w_0058",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0011"
+  },
+  {
+    "worker_id": "w_0060",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0011"
+  },
+  {
+    "worker_id": "w_0061",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0011"
+  },
+  {
+    "worker_id": "w_0062",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0012"
+  },
+  {
+    "worker_id": "w_0063",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0012"
+  },
+  {
+    "worker_id": "w_0065",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0012"
+  },
+  {
+    "worker_id": "w_0066",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0012"
+  },
+  {
+    "worker_id": "w_0067",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0013"
+  },
+  {
+    "worker_id": "w_0068",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0013"
+  },
+  {
+    "worker_id": "w_0069",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0013"
+  },
+  {
+    "worker_id": "w_0070",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0013"
+  },
+  {
+    "worker_id": "w_0071",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0014"
+  },
+  {
+    "worker_id": "w_0073",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0014"
+  },
+  {
+    "worker_id": "w_0074",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0014"
+  },
+  {
+    "worker_id": "w_0076",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0014"
+  },
+  {
+    "worker_id": "w_0077",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0015"
+  },
+  {
+    "worker_id": "w_0078",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0015"
+  },
+  {
+    "worker_id": "w_0079",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0015"
+  },
+  {
+    "worker_id": "w_0081",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0015"
+  },
+  {
+    "worker_id": "w_0082",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0015"
+  },
+  {
+    "worker_id": "w_0083",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0015"
+  },
+  {
+    "worker_id": "w_0084",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0016"
+  },
+  {
+    "worker_id": "w_0085",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0016"
+  },
+  {
+    "worker_id": "w_0087",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0016"
+  },
+  {
+    "worker_id": "w_0088",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0016"
+  },
+  {
+    "worker_id": "w_0089",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0016"
+  },
+  {
+    "worker_id": "w_0094",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 2,
+    "rated_by_worker_id": "w_0017"
+  },
+  {
+    "worker_id": "w_0097",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0017"
+  },
+  {
+    "worker_id": "w_0098",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0018"
+  },
+  {
+    "worker_id": "w_0099",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0018"
+  },
+  {
+    "worker_id": "w_0100",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0018"
+  },
+  {
+    "worker_id": "w_0101",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0018"
+  },
+  {
+    "worker_id": "w_0103",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0018"
+  },
+  {
+    "worker_id": "w_0106",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 5,
+    "rated_by_worker_id": "w_0019"
+  },
+  {
+    "worker_id": "w_0107",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0019"
+  },
+  {
+    "worker_id": "w_0110",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0020"
+  },
+  {
+    "worker_id": "w_0111",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0020"
+  },
+  {
+    "worker_id": "w_0112",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0020"
+  },
+  {
+    "worker_id": "w_0113",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 3,
+    "rated_by_worker_id": "w_0020"
+  },
+  {
+    "worker_id": "w_0114",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0021"
+  },
+  {
+    "worker_id": "w_0115",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 2,
+    "rated_by_worker_id": "w_0021"
+  },
+  {
+    "worker_id": "w_0116",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0021"
+  },
+  {
+    "worker_id": "w_0119",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0022"
+  },
+  {
+    "worker_id": "w_0120",
+    "cycle_name": "FY2025 Year-End",
+    "rating": 4,
+    "rated_by_worker_id": "w_0022"
+  }
+]

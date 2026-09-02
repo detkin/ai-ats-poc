@@ -1,0 +1,45 @@
+[
+  {
+    "worker_id": "w_0021",
+    "role": "hrbp",
+    "permissions": [
+      "people.read",
+      "absence.read",
+      "comp_bands.read",
+      "ats.read",
+      "custom_objects.read",
+      "custom_objects.write",
+      "slack.send_as_user"
+    ],
+    "is_default": true
+  },
+  {
+    "worker_id": "w_0114",
+    "role": "recruiter",
+    "permissions": [
+      "people.read",
+      "absence.read",
+      "ats.read",
+      "custom_objects.read",
+      "custom_objects.write",
+      "slack.send_as_user",
+      "calendar.freebusy.read",
+      "calendar.hold.write"
+    ],
+    "is_default": false
+  },
+  {
+    "worker_id": "w_0007",
+    "role": "manager",
+    "permissions": [
+      "people.read",
+      "absence.read",
+      "ats.read",
+      "custom_objects.read",
+      "custom_objects.write",
+      "slack.send_as_user",
+      "calendar.freebusy.read"
+    ],
+    "is_default": false
+  }
+]

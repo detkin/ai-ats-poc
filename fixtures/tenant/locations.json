@@ -1,0 +1,46 @@
+[
+  {
+    "id": "loc_sf",
+    "name": "San Francisco",
+    "country": "US",
+    "timezone": "America/Los_Angeles",
+    "work_hours": {
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "location_group": "US"
+  },
+  {
+    "id": "loc_nyc",
+    "name": "New York",
+    "country": "US",
+    "timezone": "America/New_York",
+    "work_hours": {
+      "start": "09:00",
+      "end": "18:00"
+    },
+    "location_group": "US"
+  },
+  {
+    "id": "loc_blr",
+    "name": "Bangalore",
+    "country": "IN",
+    "timezone": "Asia/Kolkata",
+    "work_hours": {
+      "start": "10:00",
+      "end": "19:00"
+    },
+    "location_group": "IN"
+  },
+  {
+    "id": "loc_remote_us",
+    "name": "Remote (US)",
+    "country": "US",
+    "timezone": "America/Chicago",
+    "work_hours": {
+      "start": "09:00",
+      "end": "17:30"
+    },
+    "location_group": "US"
+  }
+]

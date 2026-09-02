@@ -1,0 +1,412 @@
+[
+  {
+    "id": "app_0001",
+    "candidate_id": "cand_0001",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Onsite",
+    "applied_at": "2026-07-23T15:30:00Z",
+    "updated_at": "2026-07-31T17:00:00Z"
+  },
+  {
+    "id": "app_0002",
+    "candidate_id": "cand_0002",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Onsite",
+    "applied_at": "2026-07-09T15:30:00Z",
+    "updated_at": "2026-07-18T17:00:00Z"
+  },
+  {
+    "id": "app_0003",
+    "candidate_id": "cand_0003",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Onsite",
+    "applied_at": "2026-07-19T15:30:00Z",
+    "updated_at": "2026-08-07T17:00:00Z"
+  },
+  {
+    "id": "app_0004",
+    "candidate_id": "cand_0004",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Onsite",
+    "applied_at": "2026-07-22T15:30:00Z",
+    "updated_at": "2026-08-05T17:00:00Z"
+  },
+  {
+    "id": "app_0005",
+    "candidate_id": "cand_0005",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Technical",
+    "applied_at": "2026-07-27T15:30:00Z",
+    "updated_at": "2026-08-01T17:00:00Z"
+  },
+  {
+    "id": "app_0006",
+    "candidate_id": "cand_0006",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Technical",
+    "applied_at": "2026-07-30T15:30:00Z",
+    "updated_at": "2026-08-08T17:00:00Z"
+  },
+  {
+    "id": "app_0007",
+    "candidate_id": "cand_0007",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Technical",
+    "applied_at": "2026-07-23T15:30:00Z",
+    "updated_at": "2026-08-15T17:00:00Z"
+  },
+  {
+    "id": "app_0008",
+    "candidate_id": "cand_0008",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Phone Screen",
+    "applied_at": "2026-08-17T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0009",
+    "candidate_id": "cand_0009",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Phone Screen",
+    "applied_at": "2026-08-08T15:30:00Z",
+    "updated_at": "2026-08-15T17:00:00Z"
+  },
+  {
+    "id": "app_0010",
+    "candidate_id": "cand_0010",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Phone Screen",
+    "applied_at": "2026-08-13T15:30:00Z",
+    "updated_at": "2026-08-23T17:00:00Z"
+  },
+  {
+    "id": "app_0011",
+    "candidate_id": "cand_0011",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Applied",
+    "applied_at": "2026-08-18T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0012",
+    "candidate_id": "cand_0012",
+    "job_id": "req_staff_eng",
+    "status": "ACTIVE",
+    "stage": "Applied",
+    "applied_at": "2026-08-24T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0013",
+    "candidate_id": "cand_0013",
+    "job_id": "req_staff_eng",
+    "status": "REJECTED",
+    "stage": "Rejected",
+    "applied_at": "2026-07-24T15:30:00Z",
+    "updated_at": "2026-08-01T17:00:00Z",
+    "rejected_reason": "Requisition closed before a decision"
+  },
+  {
+    "id": "app_0014",
+    "candidate_id": "cand_0014",
+    "job_id": "req_staff_eng",
+    "status": "REJECTED",
+    "stage": "Rejected",
+    "applied_at": "2026-07-14T15:30:00Z",
+    "updated_at": "2026-07-26T17:00:00Z",
+    "rejected_reason": "Compensation expectations outside the band"
+  },
+  {
+    "id": "app_0015",
+    "candidate_id": "cand_0015",
+    "job_id": "req_ae",
+    "status": "HIRED",
+    "stage": "Hired",
+    "applied_at": "2026-07-22T15:30:00Z",
+    "updated_at": "2026-08-24T18:00:00Z"
+  },
+  {
+    "id": "app_0016",
+    "candidate_id": "cand_0016",
+    "job_id": "req_ae",
+    "status": "ACTIVE",
+    "stage": "Onsite",
+    "applied_at": "2026-08-04T15:30:00Z",
+    "updated_at": "2026-08-26T17:00:00Z"
+  },
+  {
+    "id": "app_0017",
+    "candidate_id": "cand_0017",
+    "job_id": "req_ae",
+    "status": "ACTIVE",
+    "stage": "Onsite",
+    "applied_at": "2026-08-01T15:30:00Z",
+    "updated_at": "2026-08-08T17:00:00Z"
+  },
+  {
+    "id": "app_0018",
+    "candidate_id": "cand_0018",
+    "job_id": "req_ae",
+    "status": "ACTIVE",
+    "stage": "Phone Screen",
+    "applied_at": "2026-08-08T15:30:00Z",
+    "updated_at": "2026-08-19T17:00:00Z"
+  },
+  {
+    "id": "app_0019",
+    "candidate_id": "cand_0019",
+    "job_id": "req_ae",
+    "status": "ACTIVE",
+    "stage": "Phone Screen",
+    "applied_at": "2026-08-10T15:30:00Z",
+    "updated_at": "2026-08-26T17:00:00Z"
+  },
+  {
+    "id": "app_0020",
+    "candidate_id": "cand_0020",
+    "job_id": "req_ae",
+    "status": "ACTIVE",
+    "stage": "Phone Screen",
+    "applied_at": "2026-08-07T15:30:00Z",
+    "updated_at": "2026-08-27T17:00:00Z"
+  },
+  {
+    "id": "app_0021",
+    "candidate_id": "cand_0021",
+    "job_id": "req_ae",
+    "status": "ACTIVE",
+    "stage": "Applied",
+    "applied_at": "2026-08-21T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0022",
+    "candidate_id": "cand_0022",
+    "job_id": "req_ae",
+    "status": "ACTIVE",
+    "stage": "Applied",
+    "applied_at": "2026-08-26T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0023",
+    "candidate_id": "cand_0023",
+    "job_id": "req_ae",
+    "status": "REJECTED",
+    "stage": "Rejected",
+    "applied_at": "2026-07-23T15:30:00Z",
+    "updated_at": "2026-08-10T17:00:00Z",
+    "rejected_reason": "Requisition closed before a decision"
+  },
+  {
+    "id": "app_0024",
+    "candidate_id": "cand_0024",
+    "job_id": "req_ae",
+    "status": "REJECTED",
+    "stage": "Rejected",
+    "applied_at": "2026-08-01T15:30:00Z",
+    "updated_at": "2026-08-10T17:00:00Z",
+    "rejected_reason": "Compensation expectations outside the band"
+  },
+  {
+    "id": "app_0025",
+    "candidate_id": "cand_0025",
+    "job_id": "req_designer",
+    "status": "ACTIVE",
+    "stage": "Onsite",
+    "applied_at": "2026-08-11T15:30:00Z",
+    "updated_at": "2026-08-14T17:00:00Z"
+  },
+  {
+    "id": "app_0026",
+    "candidate_id": "cand_0026",
+    "job_id": "req_designer",
+    "status": "ACTIVE",
+    "stage": "Technical",
+    "applied_at": "2026-08-13T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0027",
+    "candidate_id": "cand_0027",
+    "job_id": "req_designer",
+    "status": "ACTIVE",
+    "stage": "Technical",
+    "applied_at": "2026-08-13T15:30:00Z",
+    "updated_at": "2026-08-26T17:00:00Z"
+  },
+  {
+    "id": "app_0028",
+    "candidate_id": "cand_0028",
+    "job_id": "req_designer",
+    "status": "ACTIVE",
+    "stage": "Applied",
+    "applied_at": "2026-08-26T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0029",
+    "candidate_id": "cand_0029",
+    "job_id": "req_designer",
+    "status": "ACTIVE",
+    "stage": "Applied",
+    "applied_at": "2026-08-25T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0030",
+    "candidate_id": "cand_0030",
+    "job_id": "req_designer",
+    "status": "ACTIVE",
+    "stage": "Applied",
+    "applied_at": "2026-08-22T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0031",
+    "candidate_id": "cand_0031",
+    "job_id": "req_designer",
+    "status": "ARCHIVED",
+    "stage": "Applied",
+    "applied_at": "2026-08-21T15:30:00Z",
+    "updated_at": "2026-09-01T17:00:00Z"
+  },
+  {
+    "id": "app_0032",
+    "candidate_id": "cand_0032",
+    "job_id": "req_designer",
+    "status": "ARCHIVED",
+    "stage": "Applied",
+    "applied_at": "2026-08-14T15:30:00Z",
+    "updated_at": "2026-08-26T17:00:00Z"
+  },
+  {
+    "id": "app_0033",
+    "candidate_id": "cand_0033",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Onsite",
+    "applied_at": "2026-02-06T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Requisition closed before a decision"
+  },
+  {
+    "id": "app_0034",
+    "candidate_id": "cand_0034",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Onsite",
+    "applied_at": "2026-02-11T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Compensation expectations outside the band"
+  },
+  {
+    "id": "app_0035",
+    "candidate_id": "cand_0035",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Onsite",
+    "applied_at": "2026-02-28T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Withdrew for timing reasons"
+  },
+  {
+    "id": "app_0036",
+    "candidate_id": "cand_0036",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Onsite",
+    "applied_at": "2026-02-14T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Stronger profiles at this stage"
+  },
+  {
+    "id": "app_0037",
+    "candidate_id": "cand_0037",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Offer",
+    "applied_at": "2026-02-13T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Depth of distributed systems experience"
+  },
+  {
+    "id": "app_0038",
+    "candidate_id": "cand_0038",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Offer",
+    "applied_at": "2026-02-24T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Requisition closed before a decision"
+  },
+  {
+    "id": "app_0039",
+    "candidate_id": "cand_0039",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Offer",
+    "applied_at": "2026-02-16T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Compensation expectations outside the band"
+  },
+  {
+    "id": "app_0040",
+    "candidate_id": "cand_0040",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Technical",
+    "applied_at": "2026-03-10T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Withdrew for timing reasons"
+  },
+  {
+    "id": "app_0041",
+    "candidate_id": "cand_0001",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Technical",
+    "applied_at": "2026-03-05T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Stronger profiles at this stage"
+  },
+  {
+    "id": "app_0042",
+    "candidate_id": "cand_0002",
+    "job_id": "req_senior_eng_closed",
+    "status": "REJECTED",
+    "stage": "Technical",
+    "applied_at": "2026-02-26T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z",
+    "rejected_reason": "Depth of distributed systems experience"
+  },
+  {
+    "id": "app_0043",
+    "candidate_id": "cand_0003",
+    "job_id": "req_senior_eng_closed",
+    "status": "ARCHIVED",
+    "stage": "Phone Screen",
+    "applied_at": "2026-03-16T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z"
+  },
+  {
+    "id": "app_0044",
+    "candidate_id": "cand_0004",
+    "job_id": "req_senior_eng_closed",
+    "status": "ARCHIVED",
+    "stage": "Phone Screen",
+    "applied_at": "2026-03-08T15:30:00Z",
+    "updated_at": "2026-05-01T16:00:00Z"
+  }
+]

@@ -1,0 +1,271 @@
+{
+  "anchor_now": "2026-09-02T16:00:00Z",
+  "generator_version": "0.1.0",
+  "seed": 20260902,
+  "files": {
+    "levels.json": {
+      "count": 9,
+      "sha256": "4e903acbfe40cded53e592e17270a532b3a6eec5e63aa17ed9e07d7487611abf"
+    },
+    "locations.json": {
+      "count": 4,
+      "sha256": "a894d4c61a155be9f2426cd3e3094820f829919b76bfd201ac6bedabca4124f9"
+    },
+    "departments.json": {
+      "count": 6,
+      "sha256": "95aaa2992281065f2a03b64ea20b3a1885348bb5c0d5e3d7840a159d4f84cab2"
+    },
+    "teams.json": {
+      "count": 17,
+      "sha256": "b421c12a5ce5f6dd8edf0425aadf534252df9f66d5de53b7119821eb21faf1be"
+    },
+    "workers.json": {
+      "count": 120,
+      "sha256": "b96bad875336c4478e0e6e6b7b5945c3ed5b8cb3e8bde86f018fa1f6368eaa0c"
+    },
+    "comp_bands.json": {
+      "count": 108,
+      "sha256": "93974bdfcea565a34652139488fa79cd42e1df574fa930bdfd55189ed438cf18"
+    },
+    "headcount_positions.json": {
+      "count": 6,
+      "sha256": "292751ba83cf037ce430a7365686edc3aa865f85581cbb3e33f4795cf0726143"
+    },
+    "job_requisitions.json": {
+      "count": 4,
+      "sha256": "5b61117b47e9dc537bed3a5b042d2ff83dd1f7f71f86a8b897806d23fa885552"
+    },
+    "candidates.json": {
+      "count": 40,
+      "sha256": "de1941ac93cd4c06dc58eb1bcb676e6f2ffb1b9d3b70887c5730bede5c18c14b"
+    },
+    "applications.json": {
+      "count": 44,
+      "sha256": "6f1a67501407f08dec0543491080c0eb988fc213583a0c940338d8a292f1e5d4"
+    },
+    "leave_types.json": {
+      "count": 4,
+      "sha256": "7ce0823bacaafafc3515beff8d5b16b084f007e9ad70fdaf3e027157a4dab856"
+    },
+    "absences.json": {
+      "count": 17,
+      "sha256": "14f14a90de457e894f8f0d580b9d490dc64f8e8ed5533deb2ff77e480ad3d574"
+    },
+    "holidays.json": {
+      "count": 9,
+      "sha256": "92bc3dd0e18bfc45f61b0217b880c7894e7a03e4839e6a7abb0f86947aa6eb62"
+    },
+    "prior_ratings.json": {
+      "count": 96,
+      "sha256": "266b1ce2f872173c087125dcf11ebbdc013b4a5a99b0a6ed882d1902aecbde24"
+    },
+    "identities.json": {
+      "count": 3,
+      "sha256": "e211166a7f19e681563debd8cc007c96c631e5c44a3beb3ad17504e4996cdbed"
+    },
+    "resumes/cand_0001.md": {
+      "count": 1,
+      "sha256": "1681af87c49d8625104ff31bb0a7ec350a9f20ee85240f30de05cd1f86df15eb"
+    },
+    "resumes/cand_0002.md": {
+      "count": 1,
+      "sha256": "b25b94d59ca96aa62afcf7b23a262701a6fcccb389d1d6180c57bbc6f193472b"
+    },
+    "resumes/cand_0003.md": {
+      "count": 1,
+      "sha256": "7a40fc1dec2fb14a800998cd135a45301dd7cb480217a7b93e81e306798b7ce7"
+    },
+    "resumes/cand_0004.md": {
+      "count": 1,
+      "sha256": "9c6f3f2c5b9c2e02439debda2a6c214464304a2a061757774db3375a420f4f10"
+    },
+    "resumes/cand_0005.md": {
+      "count": 1,
+      "sha256": "7cde7788e31b1d1fbbd885416ca961d5f852d382665d69b3bbda1151e406e9ab"
+    },
+    "resumes/cand_0006.md": {
+      "count": 1,
+      "sha256": "fcfe9bf4cff5c0dacca6fe9258dd1a978dd02f8e8a770023666ce3e3ed96d3c6"
+    },
+    "resumes/cand_0007.md": {
+      "count": 1,
+      "sha256": "2aa97ef05ec0b3b1398550e0dd11cbd20ba745695ae907d3e3270db9c062e22d"
+    },
+    "resumes/cand_0008.md": {
+      "count": 1,
+      "sha256": "bf38637deabf0168a5521868f71b99b2a05f151e587e53f32f0c883bb3fde0a9"
+    },
+    "resumes/cand_0009.md": {
+      "count": 1,
+      "sha256": "6c23db0a9f7f9f63b6cd6233b261571137cb16fd53386af57b537173bc16cf4c"
+    },
+    "resumes/cand_0010.md": {
+      "count": 1,
+      "sha256": "86f06564c73f925f1aeddb8f6bfd71c09e78b0c5cc39eac0e74877a8569a973a"
+    },
+    "resumes/cand_0011.md": {
+      "count": 1,
+      "sha256": "3f84c42fe8b4d677664a70b41eecc0c0b3508789acc1cd956a71a5934198ced8"
+    },
+    "resumes/cand_0012.md": {
+      "count": 1,
+      "sha256": "469c63886af354e8ee497a0ae1efe4311f9205aac56901b1085712bf01421ce7"
+    },
+    "resumes/cand_0013.md": {
+      "count": 1,
+      "sha256": "96833acfe79874a1cdc2e6210c6bcc24e8cd0137aee522035e498b9bf0798d11"
+    },
+    "resumes/cand_0014.md": {
+      "count": 1,
+      "sha256": "8b3881e5b6f5dda2ffb51e6d1295a7d4f6ca3605f26ba00871b856346bf75f54"
+    },
+    "resumes/cand_0015.md": {
+      "count": 1,
+      "sha256": "b36718379a69b369636a80b7be1c916b36ce61bd95e6c58e3304cc57660279ba"
+    },
+    "resumes/cand_0016.md": {
+      "count": 1,
+      "sha256": "cbe532a966bb24ebdac027a597e42f065f7cf953a2cf730fd81f829eedf4d85e"
+    },
+    "resumes/cand_0017.md": {
+      "count": 1,
+      "sha256": "8a58c6caeef4aa14fa200cc792a9244be91c7c87cc429e4414bcf6f04a41ee47"
+    },
+    "resumes/cand_0018.md": {
+      "count": 1,
+      "sha256": "d7b69aa5393fc22ab999952f40b4a4b9e95389f76b60f3ac8b124f1ad49f5688"
+    },
+    "resumes/cand_0019.md": {
+      "count": 1,
+      "sha256": "b8056b417c487a51d0a8369390a548cca5478de4d965b149cb4d39f030e9b785"
+    },
+    "resumes/cand_0020.md": {
+      "count": 1,
+      "sha256": "167fa7ae53ce5f1d484e6d5f4e432405fc9591bd87b8714ed58a20f2912b8e04"
+    },
+    "resumes/cand_0021.md": {
+      "count": 1,
+      "sha256": "d13310ff6a9a34c1363dd596ce927ddd126aa2ef64060516d89654fa82f64be3"
+    },
+    "resumes/cand_0022.md": {
+      "count": 1,
+      "sha256": "1916efa0d8a319b23c74de5e163c6a8814cf8d30a35a6df720f112f04f1116c5"
+    },
+    "resumes/cand_0023.md": {
+      "count": 1,
+      "sha256": "4d26ee8db98c98e4353df4b960193d70c0064b459332a93a6c78c51e05629d6b"
+    },
+    "resumes/cand_0024.md": {
+      "count": 1,
+      "sha256": "74dc9d233a6f7e96bad19cd8ab7842c39d13c23dd3c961507507f693e100d2b8"
+    },
+    "resumes/cand_0025.md": {
+      "count": 1,
+      "sha256": "47cbef421d188f4eb2ad82a0296aef2df3fbc7fe12ea18c97495088ce831c86a"
+    },
+    "resumes/cand_0026.md": {
+      "count": 1,
+      "sha256": "e88966ce3c3ab4bc7d369f205adecc516a5e42643b9c961f834214d264ee9f2a"
+    },
+    "resumes/cand_0027.md": {
+      "count": 1,
+      "sha256": "504d636e4c5627c4b1bf5be16ffe1a8389307f2c1080cd3e783818ee7ca072ad"
+    },
+    "resumes/cand_0028.md": {
+      "count": 1,
+      "sha256": "d07cab7726ae2604f4adc05cb876f83fba490d7b1dd30b2aa29bc3b7ce605b90"
+    },
+    "resumes/cand_0029.md": {
+      "count": 1,
+      "sha256": "353a24b3923ec2a6a51d07c4916f0074902510b0d779989f24db2c78116a1aa2"
+    },
+    "resumes/cand_0030.md": {
+      "count": 1,
+      "sha256": "10632ded26eb10e827ce6201cd105f0f00b4cdfa30ef7aba8f50ad16c5a982d8"
+    },
+    "resumes/cand_0031.md": {
+      "count": 1,
+      "sha256": "47be746a855ef33b6ac0e83d648c335315be38bafa40dc0540d74268f5eaa741"
+    },
+    "resumes/cand_0032.md": {
+      "count": 1,
+      "sha256": "225abae1d93310d7974934c1cebd6ca904e1eff3945d42ca4fca33ab8a26fe6d"
+    },
+    "resumes/cand_0033.md": {
+      "count": 1,
+      "sha256": "c5400ae198aa28ff70b9936ec28610217da498279e585c7e107f4dc1658938b5"
+    },
+    "resumes/cand_0034.md": {
+      "count": 1,
+      "sha256": "af54262a0bb2b1f5f93a7c60e4d8b833836bda6af0402a679bc29aff503b357c"
+    },
+    "resumes/cand_0035.md": {
+      "count": 1,
+      "sha256": "de0b09e69efb09c0a0b7011068ed39ec4109c851fc181c3da47adfb9d578d99b"
+    },
+    "resumes/cand_0036.md": {
+      "count": 1,
+      "sha256": "17e477bb79d40e3ea0ecad8ab49a48344919e8345018e6819bbd8b302afe66d7"
+    },
+    "resumes/cand_0037.md": {
+      "count": 1,
+      "sha256": "17fff9d2dc151aa83e0ced8accb5064da6fc2084538f854130b955f5ba6f6b47"
+    },
+    "resumes/cand_0038.md": {
+      "count": 1,
+      "sha256": "f2a78ad50610366af25a1f49ccaad78d40c75f4106d3912078a33ed6d7b67dc0"
+    },
+    "resumes/cand_0039.md": {
+      "count": 1,
+      "sha256": "f0c48d27f4d12d8fddc6aa9d5864b98c3d0e939d7497f12985f616461cb9216a"
+    },
+    "resumes/cand_0040.md": {
+      "count": 1,
+      "sha256": "59f3b25bf85ebad46627709ba60e66628f7a5012e362bd810671b9cd453b8ccc"
+    },
+    "state/cycles.json": {
+      "count": 1,
+      "sha256": "34a66cf3ed332d4f300776ff332aab9c1773a9025a520a6787d9e1747aaf15ef"
+    },
+    "state/tasks.json": {
+      "count": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "state/nudges.json": {
+      "count": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "state/packets.json": {
+      "count": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "state/proposed_actions.json": {
+      "count": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "state/matches.json": {
+      "count": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "state/interview_slots.json": {
+      "count": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "state/scorecards.json": {
+      "count": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "state/review_submissions.json": {
+      "count": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "state/anomalies.json": {
+      "count": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "state/ledger.jsonl": {
+      "count": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

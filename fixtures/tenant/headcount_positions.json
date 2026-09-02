@@ -1,0 +1,62 @@
+[
+  {
+    "id": "hcp_0001",
+    "department_id": "dept_eng",
+    "level_id": "lvl_L6",
+    "title": "Staff Software Engineer",
+    "status": "OPEN",
+    "job_requisition_id": "req_staff_eng",
+    "recruiter_id": "w_0114",
+    "plan_quarter": "2026-Q3"
+  },
+  {
+    "id": "hcp_0002",
+    "department_id": "dept_sales",
+    "level_id": "lvl_L4",
+    "title": "Account Executive",
+    "status": "OPEN",
+    "job_requisition_id": "req_ae",
+    "recruiter_id": "w_0114",
+    "plan_quarter": "2026-Q3"
+  },
+  {
+    "id": "hcp_0003",
+    "department_id": "dept_eng",
+    "level_id": "lvl_L5",
+    "title": "Senior Software Engineer",
+    "status": "FILLED",
+    "job_requisition_id": "req_senior_eng_closed",
+    "recruiter_id": "w_0114",
+    "plan_quarter": "2026-Q1"
+  },
+  {
+    "id": "hcp_0004",
+    "department_id": "dept_product",
+    "level_id": "lvl_L5",
+    "title": "Senior Product Manager",
+    "status": "PLANNED",
+    "job_requisition_id": null,
+    "recruiter_id": "w_0114",
+    "plan_quarter": "2026-Q4"
+  },
+  {
+    "id": "hcp_0005",
+    "department_id": "dept_eng",
+    "level_id": "lvl_L4",
+    "title": "Software Engineer II",
+    "status": "PLANNED",
+    "job_requisition_id": null,
+    "recruiter_id": "w_0114",
+    "plan_quarter": "2026-Q4"
+  },
+  {
+    "id": "hcp_0006",
+    "department_id": "dept_cs",
+    "level_id": "lvl_L4",
+    "title": "Customer Success Manager",
+    "status": "PLANNED",
+    "job_requisition_id": null,
+    "recruiter_id": "w_0114",
+    "plan_quarter": "2026-Q4"
+  }
+]

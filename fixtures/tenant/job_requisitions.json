@@ -1,0 +1,76 @@
+[
+  {
+    "id": "req_staff_eng",
+    "title": "Staff Software Engineer",
+    "department_id": "dept_eng",
+    "level_id": "lvl_L6",
+    "job_function": "engineering",
+    "location_id": "loc_sf",
+    "hiring_manager_id": "w_0007",
+    "recruiter_id": "w_0114",
+    "status": "OPEN",
+    "headcount_position_id": "hcp_0001",
+    "opened_at": "2026-07-06T16:00:00Z",
+    "criteria": [
+      "Eight or more years building distributed backend systems",
+      "Has owned a multi-region service through a migration",
+      "Mentors senior engineers and reviews design documents",
+      "Comfortable with Go or Rust and with PostgreSQL at scale"
+    ]
+  },
+  {
+    "id": "req_ae",
+    "title": "Account Executive",
+    "department_id": "dept_sales",
+    "level_id": "lvl_L4",
+    "job_function": "sales",
+    "location_id": "loc_nyc",
+    "hiring_manager_id": "w_0015",
+    "recruiter_id": "w_0114",
+    "status": "OPEN",
+    "headcount_position_id": "hcp_0002",
+    "opened_at": "2026-07-20T16:00:00Z",
+    "criteria": [
+      "Three or more years closing mid-market SaaS deals",
+      "Track record against a quota above $900k",
+      "Experience selling into operations and facilities teams"
+    ]
+  },
+  {
+    "id": "req_designer",
+    "title": "Product Designer",
+    "department_id": "dept_design",
+    "level_id": "lvl_L5",
+    "job_function": "design",
+    "location_id": "loc_remote_us",
+    "hiring_manager_id": "w_0014",
+    "recruiter_id": "w_0114",
+    "status": "OPEN",
+    "headcount_position_id": null,
+    "opened_at": "2026-08-10T16:00:00Z",
+    "criteria": [
+      "Portfolio of shipped end-to-end product work",
+      "Comfortable running research with industrial users",
+      "Has contributed to a design system used by several teams"
+    ]
+  },
+  {
+    "id": "req_senior_eng_closed",
+    "title": "Senior Software Engineer",
+    "department_id": "dept_eng",
+    "level_id": "lvl_L5",
+    "job_function": "engineering",
+    "location_id": "loc_sf",
+    "hiring_manager_id": "w_0007",
+    "recruiter_id": "w_0114",
+    "status": "CLOSED",
+    "headcount_position_id": "hcp_0003",
+    "opened_at": "2026-01-15T17:00:00Z",
+    "closed_at": "2026-05-01T16:00:00Z",
+    "criteria": [
+      "Five or more years on production backend services",
+      "Strong testing and code review habits",
+      "Familiar with event-driven architectures"
+    ]
+  }
+]

@@ -1,0 +1,1082 @@
+[
+  {
+    "id": "band_L3_engineering_US",
+    "level_id": "lvl_L3",
+    "job_function": "engineering",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 110000,
+    "mid": 130000,
+    "max": 156000
+  },
+  {
+    "id": "band_L3_engineering_IN",
+    "level_id": "lvl_L3",
+    "job_function": "engineering",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 2640000,
+    "mid": 3120000,
+    "max": 3750000
+  },
+  {
+    "id": "band_L3_product_US",
+    "level_id": "lvl_L3",
+    "job_function": "product",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 107000,
+    "mid": 126000,
+    "max": 152000
+  },
+  {
+    "id": "band_L3_product_IN",
+    "level_id": "lvl_L3",
+    "job_function": "product",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 2560000,
+    "mid": 3020000,
+    "max": 3640000
+  },
+  {
+    "id": "band_L3_design_US",
+    "level_id": "lvl_L3",
+    "job_function": "design",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 99000,
+    "mid": 117000,
+    "max": 141000
+  },
+  {
+    "id": "band_L3_design_IN",
+    "level_id": "lvl_L3",
+    "job_function": "design",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 2380000,
+    "mid": 2810000,
+    "max": 3380000
+  },
+  {
+    "id": "band_L3_sales_US",
+    "level_id": "lvl_L3",
+    "job_function": "sales",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 90000,
+    "mid": 106000,
+    "max": 128000
+  },
+  {
+    "id": "band_L3_sales_IN",
+    "level_id": "lvl_L3",
+    "job_function": "sales",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 2160000,
+    "mid": 2550000,
+    "max": 3070000
+  },
+  {
+    "id": "band_L3_customer_success_US",
+    "level_id": "lvl_L3",
+    "job_function": "customer_success",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 83000,
+    "mid": 98000,
+    "max": 118000
+  },
+  {
+    "id": "band_L3_customer_success_IN",
+    "level_id": "lvl_L3",
+    "job_function": "customer_success",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 1980000,
+    "mid": 2340000,
+    "max": 2810000
+  },
+  {
+    "id": "band_L3_ga_US",
+    "level_id": "lvl_L3",
+    "job_function": "ga",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 88000,
+    "mid": 104000,
+    "max": 125000
+  },
+  {
+    "id": "band_L3_ga_IN",
+    "level_id": "lvl_L3",
+    "job_function": "ga",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 2110000,
+    "mid": 2490000,
+    "max": 3000000
+  },
+  {
+    "id": "band_L4_engineering_US",
+    "level_id": "lvl_L4",
+    "job_function": "engineering",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 140000,
+    "mid": 165000,
+    "max": 199000
+  },
+  {
+    "id": "band_L4_engineering_IN",
+    "level_id": "lvl_L4",
+    "job_function": "engineering",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3360000,
+    "mid": 3960000,
+    "max": 4770000
+  },
+  {
+    "id": "band_L4_product_US",
+    "level_id": "lvl_L4",
+    "job_function": "product",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 136000,
+    "mid": 160000,
+    "max": 193000
+  },
+  {
+    "id": "band_L4_product_IN",
+    "level_id": "lvl_L4",
+    "job_function": "product",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3260000,
+    "mid": 3850000,
+    "max": 4630000
+  },
+  {
+    "id": "band_L4_design_US",
+    "level_id": "lvl_L4",
+    "job_function": "design",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 126000,
+    "mid": 149000,
+    "max": 179000
+  },
+  {
+    "id": "band_L4_design_IN",
+    "level_id": "lvl_L4",
+    "job_function": "design",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3020000,
+    "mid": 3560000,
+    "max": 4290000
+  },
+  {
+    "id": "band_L4_sales_US",
+    "level_id": "lvl_L4",
+    "job_function": "sales",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 115000,
+    "mid": 136000,
+    "max": 163000
+  },
+  {
+    "id": "band_L4_sales_IN",
+    "level_id": "lvl_L4",
+    "job_function": "sales",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 2760000,
+    "mid": 3260000,
+    "max": 3920000
+  },
+  {
+    "id": "band_L4_customer_success_US",
+    "level_id": "lvl_L4",
+    "job_function": "customer_success",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 105000,
+    "mid": 124000,
+    "max": 149000
+  },
+  {
+    "id": "band_L4_customer_success_IN",
+    "level_id": "lvl_L4",
+    "job_function": "customer_success",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 2520000,
+    "mid": 2970000,
+    "max": 3580000
+  },
+  {
+    "id": "band_L4_ga_US",
+    "level_id": "lvl_L4",
+    "job_function": "ga",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 112000,
+    "mid": 132000,
+    "max": 159000
+  },
+  {
+    "id": "band_L4_ga_IN",
+    "level_id": "lvl_L4",
+    "job_function": "ga",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 2690000,
+    "mid": 3170000,
+    "max": 3820000
+  },
+  {
+    "id": "band_L5_engineering_US",
+    "level_id": "lvl_L5",
+    "job_function": "engineering",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 175000,
+    "mid": 207000,
+    "max": 249000
+  },
+  {
+    "id": "band_L5_engineering_IN",
+    "level_id": "lvl_L5",
+    "job_function": "engineering",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4200000,
+    "mid": 4960000,
+    "max": 5960000
+  },
+  {
+    "id": "band_L5_product_US",
+    "level_id": "lvl_L5",
+    "job_function": "product",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 170000,
+    "mid": 201000,
+    "max": 241000
+  },
+  {
+    "id": "band_L5_product_IN",
+    "level_id": "lvl_L5",
+    "job_function": "product",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4070000,
+    "mid": 4800000,
+    "max": 5780000
+  },
+  {
+    "id": "band_L5_design_US",
+    "level_id": "lvl_L5",
+    "job_function": "design",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 158000,
+    "mid": 186000,
+    "max": 224000
+  },
+  {
+    "id": "band_L5_design_IN",
+    "level_id": "lvl_L5",
+    "job_function": "design",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3780000,
+    "mid": 4460000,
+    "max": 5370000
+  },
+  {
+    "id": "band_L5_sales_US",
+    "level_id": "lvl_L5",
+    "job_function": "sales",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 144000,
+    "mid": 170000,
+    "max": 204000
+  },
+  {
+    "id": "band_L5_sales_IN",
+    "level_id": "lvl_L5",
+    "job_function": "sales",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3440000,
+    "mid": 4060000,
+    "max": 4880000
+  },
+  {
+    "id": "band_L5_customer_success_US",
+    "level_id": "lvl_L5",
+    "job_function": "customer_success",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 131000,
+    "mid": 155000,
+    "max": 186000
+  },
+  {
+    "id": "band_L5_customer_success_IN",
+    "level_id": "lvl_L5",
+    "job_function": "customer_success",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3150000,
+    "mid": 3720000,
+    "max": 4470000
+  },
+  {
+    "id": "band_L5_ga_US",
+    "level_id": "lvl_L5",
+    "job_function": "ga",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 140000,
+    "mid": 165000,
+    "max": 199000
+  },
+  {
+    "id": "band_L5_ga_IN",
+    "level_id": "lvl_L5",
+    "job_function": "ga",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3360000,
+    "mid": 3960000,
+    "max": 4770000
+  },
+  {
+    "id": "band_L6_engineering_US",
+    "level_id": "lvl_L6",
+    "job_function": "engineering",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 215000,
+    "mid": 254000,
+    "max": 305000
+  },
+  {
+    "id": "band_L6_engineering_IN",
+    "level_id": "lvl_L6",
+    "job_function": "engineering",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5160000,
+    "mid": 6090000,
+    "max": 7330000
+  },
+  {
+    "id": "band_L6_product_US",
+    "level_id": "lvl_L6",
+    "job_function": "product",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 209000,
+    "mid": 247000,
+    "max": 297000
+  },
+  {
+    "id": "band_L6_product_IN",
+    "level_id": "lvl_L6",
+    "job_function": "product",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5010000,
+    "mid": 5910000,
+    "max": 7110000
+  },
+  {
+    "id": "band_L6_design_US",
+    "level_id": "lvl_L6",
+    "job_function": "design",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 194000,
+    "mid": 229000,
+    "max": 275000
+  },
+  {
+    "id": "band_L6_design_IN",
+    "level_id": "lvl_L6",
+    "job_function": "design",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4640000,
+    "mid": 5480000,
+    "max": 6590000
+  },
+  {
+    "id": "band_L6_sales_US",
+    "level_id": "lvl_L6",
+    "job_function": "sales",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 176000,
+    "mid": 208000,
+    "max": 250000
+  },
+  {
+    "id": "band_L6_sales_IN",
+    "level_id": "lvl_L6",
+    "job_function": "sales",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4230000,
+    "mid": 4990000,
+    "max": 6010000
+  },
+  {
+    "id": "band_L6_customer_success_US",
+    "level_id": "lvl_L6",
+    "job_function": "customer_success",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 161000,
+    "mid": 190000,
+    "max": 229000
+  },
+  {
+    "id": "band_L6_customer_success_IN",
+    "level_id": "lvl_L6",
+    "job_function": "customer_success",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3870000,
+    "mid": 4570000,
+    "max": 5500000
+  },
+  {
+    "id": "band_L6_ga_US",
+    "level_id": "lvl_L6",
+    "job_function": "ga",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 172000,
+    "mid": 203000,
+    "max": 244000
+  },
+  {
+    "id": "band_L6_ga_IN",
+    "level_id": "lvl_L6",
+    "job_function": "ga",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4130000,
+    "mid": 4870000,
+    "max": 5860000
+  },
+  {
+    "id": "band_L7_engineering_US",
+    "level_id": "lvl_L7",
+    "job_function": "engineering",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 255000,
+    "mid": 301000,
+    "max": 362000
+  },
+  {
+    "id": "band_L7_engineering_IN",
+    "level_id": "lvl_L7",
+    "job_function": "engineering",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 6120000,
+    "mid": 7220000,
+    "max": 8690000
+  },
+  {
+    "id": "band_L7_product_US",
+    "level_id": "lvl_L7",
+    "job_function": "product",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 247000,
+    "mid": 291000,
+    "max": 351000
+  },
+  {
+    "id": "band_L7_product_IN",
+    "level_id": "lvl_L7",
+    "job_function": "product",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5940000,
+    "mid": 7010000,
+    "max": 8430000
+  },
+  {
+    "id": "band_L7_design_US",
+    "level_id": "lvl_L7",
+    "job_function": "design",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 230000,
+    "mid": 271000,
+    "max": 327000
+  },
+  {
+    "id": "band_L7_design_IN",
+    "level_id": "lvl_L7",
+    "job_function": "design",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5510000,
+    "mid": 6500000,
+    "max": 7820000
+  },
+  {
+    "id": "band_L7_sales_US",
+    "level_id": "lvl_L7",
+    "job_function": "sales",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 209000,
+    "mid": 247000,
+    "max": 297000
+  },
+  {
+    "id": "band_L7_sales_IN",
+    "level_id": "lvl_L7",
+    "job_function": "sales",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5020000,
+    "mid": 5920000,
+    "max": 7130000
+  },
+  {
+    "id": "band_L7_customer_success_US",
+    "level_id": "lvl_L7",
+    "job_function": "customer_success",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 191000,
+    "mid": 225000,
+    "max": 271000
+  },
+  {
+    "id": "band_L7_customer_success_IN",
+    "level_id": "lvl_L7",
+    "job_function": "customer_success",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4590000,
+    "mid": 5420000,
+    "max": 6520000
+  },
+  {
+    "id": "band_L7_ga_US",
+    "level_id": "lvl_L7",
+    "job_function": "ga",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 204000,
+    "mid": 241000,
+    "max": 290000
+  },
+  {
+    "id": "band_L7_ga_IN",
+    "level_id": "lvl_L7",
+    "job_function": "ga",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4900000,
+    "mid": 5780000,
+    "max": 6960000
+  },
+  {
+    "id": "band_M1_engineering_US",
+    "level_id": "lvl_M1",
+    "job_function": "engineering",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 184000,
+    "mid": 217000,
+    "max": 261000
+  },
+  {
+    "id": "band_M1_engineering_IN",
+    "level_id": "lvl_M1",
+    "job_function": "engineering",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4410000,
+    "mid": 5200000,
+    "max": 6260000
+  },
+  {
+    "id": "band_M1_product_US",
+    "level_id": "lvl_M1",
+    "job_function": "product",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 178000,
+    "mid": 210000,
+    "max": 253000
+  },
+  {
+    "id": "band_M1_product_IN",
+    "level_id": "lvl_M1",
+    "job_function": "product",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4280000,
+    "mid": 5050000,
+    "max": 6080000
+  },
+  {
+    "id": "band_M1_design_US",
+    "level_id": "lvl_M1",
+    "job_function": "design",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 165000,
+    "mid": 195000,
+    "max": 234000
+  },
+  {
+    "id": "band_M1_design_IN",
+    "level_id": "lvl_M1",
+    "job_function": "design",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3970000,
+    "mid": 4680000,
+    "max": 5640000
+  },
+  {
+    "id": "band_M1_sales_US",
+    "level_id": "lvl_M1",
+    "job_function": "sales",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 151000,
+    "mid": 178000,
+    "max": 214000
+  },
+  {
+    "id": "band_M1_sales_IN",
+    "level_id": "lvl_M1",
+    "job_function": "sales",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3620000,
+    "mid": 4270000,
+    "max": 5140000
+  },
+  {
+    "id": "band_M1_customer_success_US",
+    "level_id": "lvl_M1",
+    "job_function": "customer_success",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 138000,
+    "mid": 163000,
+    "max": 196000
+  },
+  {
+    "id": "band_M1_customer_success_IN",
+    "level_id": "lvl_M1",
+    "job_function": "customer_success",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3310000,
+    "mid": 3910000,
+    "max": 4700000
+  },
+  {
+    "id": "band_M1_ga_US",
+    "level_id": "lvl_M1",
+    "job_function": "ga",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 147000,
+    "mid": 173000,
+    "max": 209000
+  },
+  {
+    "id": "band_M1_ga_IN",
+    "level_id": "lvl_M1",
+    "job_function": "ga",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 3530000,
+    "mid": 4170000,
+    "max": 5010000
+  },
+  {
+    "id": "band_M2_engineering_US",
+    "level_id": "lvl_M2",
+    "job_function": "engineering",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 226000,
+    "mid": 267000,
+    "max": 321000
+  },
+  {
+    "id": "band_M2_engineering_IN",
+    "level_id": "lvl_M2",
+    "job_function": "engineering",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5420000,
+    "mid": 6400000,
+    "max": 7700000
+  },
+  {
+    "id": "band_M2_product_US",
+    "level_id": "lvl_M2",
+    "job_function": "product",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 219000,
+    "mid": 258000,
+    "max": 311000
+  },
+  {
+    "id": "band_M2_product_IN",
+    "level_id": "lvl_M2",
+    "job_function": "product",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5260000,
+    "mid": 6210000,
+    "max": 7470000
+  },
+  {
+    "id": "band_M2_design_US",
+    "level_id": "lvl_M2",
+    "job_function": "design",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 203000,
+    "mid": 240000,
+    "max": 288000
+  },
+  {
+    "id": "band_M2_design_IN",
+    "level_id": "lvl_M2",
+    "job_function": "design",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4880000,
+    "mid": 5760000,
+    "max": 6930000
+  },
+  {
+    "id": "band_M2_sales_US",
+    "level_id": "lvl_M2",
+    "job_function": "sales",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 185000,
+    "mid": 218000,
+    "max": 263000
+  },
+  {
+    "id": "band_M2_sales_IN",
+    "level_id": "lvl_M2",
+    "job_function": "sales",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4440000,
+    "mid": 5240000,
+    "max": 6300000
+  },
+  {
+    "id": "band_M2_customer_success_US",
+    "level_id": "lvl_M2",
+    "job_function": "customer_success",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 169000,
+    "mid": 199000,
+    "max": 240000
+  },
+  {
+    "id": "band_M2_customer_success_IN",
+    "level_id": "lvl_M2",
+    "job_function": "customer_success",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4060000,
+    "mid": 4790000,
+    "max": 5770000
+  },
+  {
+    "id": "band_M2_ga_US",
+    "level_id": "lvl_M2",
+    "job_function": "ga",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 181000,
+    "mid": 214000,
+    "max": 257000
+  },
+  {
+    "id": "band_M2_ga_IN",
+    "level_id": "lvl_M2",
+    "job_function": "ga",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4330000,
+    "mid": 5110000,
+    "max": 6150000
+  },
+  {
+    "id": "band_M3_engineering_US",
+    "level_id": "lvl_M3",
+    "job_function": "engineering",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 268000,
+    "mid": 316000,
+    "max": 381000
+  },
+  {
+    "id": "band_M3_engineering_IN",
+    "level_id": "lvl_M3",
+    "job_function": "engineering",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 6430000,
+    "mid": 7590000,
+    "max": 9130000
+  },
+  {
+    "id": "band_M3_product_US",
+    "level_id": "lvl_M3",
+    "job_function": "product",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 260000,
+    "mid": 307000,
+    "max": 369000
+  },
+  {
+    "id": "band_M3_product_IN",
+    "level_id": "lvl_M3",
+    "job_function": "product",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 6230000,
+    "mid": 7350000,
+    "max": 8850000
+  },
+  {
+    "id": "band_M3_design_US",
+    "level_id": "lvl_M3",
+    "job_function": "design",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 241000,
+    "mid": 284000,
+    "max": 342000
+  },
+  {
+    "id": "band_M3_design_IN",
+    "level_id": "lvl_M3",
+    "job_function": "design",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5780000,
+    "mid": 6820000,
+    "max": 8210000
+  },
+  {
+    "id": "band_M3_sales_US",
+    "level_id": "lvl_M3",
+    "job_function": "sales",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 220000,
+    "mid": 260000,
+    "max": 312000
+  },
+  {
+    "id": "band_M3_sales_IN",
+    "level_id": "lvl_M3",
+    "job_function": "sales",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5270000,
+    "mid": 6220000,
+    "max": 7480000
+  },
+  {
+    "id": "band_M3_customer_success_US",
+    "level_id": "lvl_M3",
+    "job_function": "customer_success",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 201000,
+    "mid": 237000,
+    "max": 285000
+  },
+  {
+    "id": "band_M3_customer_success_IN",
+    "level_id": "lvl_M3",
+    "job_function": "customer_success",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 4820000,
+    "mid": 5690000,
+    "max": 6840000
+  },
+  {
+    "id": "band_M3_ga_US",
+    "level_id": "lvl_M3",
+    "job_function": "ga",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 214000,
+    "mid": 253000,
+    "max": 304000
+  },
+  {
+    "id": "band_M3_ga_IN",
+    "level_id": "lvl_M3",
+    "job_function": "ga",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5140000,
+    "mid": 6070000,
+    "max": 7300000
+  },
+  {
+    "id": "band_E1_engineering_US",
+    "level_id": "lvl_E1",
+    "job_function": "engineering",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 330000,
+    "mid": 389000,
+    "max": 469000
+  },
+  {
+    "id": "band_E1_engineering_IN",
+    "level_id": "lvl_E1",
+    "job_function": "engineering",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 7920000,
+    "mid": 9350000,
+    "max": 11250000
+  },
+  {
+    "id": "band_E1_product_US",
+    "level_id": "lvl_E1",
+    "job_function": "product",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 320000,
+    "mid": 378000,
+    "max": 454000
+  },
+  {
+    "id": "band_E1_product_IN",
+    "level_id": "lvl_E1",
+    "job_function": "product",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 7680000,
+    "mid": 9060000,
+    "max": 10910000
+  },
+  {
+    "id": "band_E1_design_US",
+    "level_id": "lvl_E1",
+    "job_function": "design",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 297000,
+    "mid": 350000,
+    "max": 422000
+  },
+  {
+    "id": "band_E1_design_IN",
+    "level_id": "lvl_E1",
+    "job_function": "design",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 7130000,
+    "mid": 8410000,
+    "max": 10120000
+  },
+  {
+    "id": "band_E1_sales_US",
+    "level_id": "lvl_E1",
+    "job_function": "sales",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 271000,
+    "mid": 320000,
+    "max": 385000
+  },
+  {
+    "id": "band_E1_sales_IN",
+    "level_id": "lvl_E1",
+    "job_function": "sales",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 6490000,
+    "mid": 7660000,
+    "max": 9220000
+  },
+  {
+    "id": "band_E1_customer_success_US",
+    "level_id": "lvl_E1",
+    "job_function": "customer_success",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 248000,
+    "mid": 293000,
+    "max": 352000
+  },
+  {
+    "id": "band_E1_customer_success_IN",
+    "level_id": "lvl_E1",
+    "job_function": "customer_success",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 5940000,
+    "mid": 7010000,
+    "max": 8430000
+  },
+  {
+    "id": "band_E1_ga_US",
+    "level_id": "lvl_E1",
+    "job_function": "ga",
+    "location_group": "US",
+    "currency": "USD",
+    "min": 264000,
+    "mid": 312000,
+    "max": 375000
+  },
+  {
+    "id": "band_E1_ga_IN",
+    "level_id": "lvl_E1",
+    "job_function": "ga",
+    "location_group": "IN",
+    "currency": "INR",
+    "min": 6340000,
+    "mid": 7480000,
+    "max": 9000000
+  }
+]

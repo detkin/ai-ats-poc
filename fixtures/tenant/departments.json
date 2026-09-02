@@ -1,0 +1,32 @@
+[
+  {
+    "id": "dept_eng",
+    "name": "Engineering",
+    "head_worker_id": "w_0002"
+  },
+  {
+    "id": "dept_product",
+    "name": "Product",
+    "head_worker_id": "w_0003"
+  },
+  {
+    "id": "dept_design",
+    "name": "Design",
+    "head_worker_id": "w_0004"
+  },
+  {
+    "id": "dept_sales",
+    "name": "Sales",
+    "head_worker_id": "w_0005"
+  },
+  {
+    "id": "dept_cs",
+    "name": "Customer Success",
+    "head_worker_id": "w_0006"
+  },
+  {
+    "id": "dept_ga",
+    "name": "G&A",
+    "head_worker_id": "w_0001"
+  }
+]
