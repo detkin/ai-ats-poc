@@ -6,3 +6,4 @@ tenant/ledger
 fixtures/tenant/**/*.json
 package-lock.json
 docs/
+evals/golden/
