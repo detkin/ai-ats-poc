@@ -1,0 +1,87 @@
+# templates/loop-states.yml — canonical state machines for the cycle engine.
+#
+# Single source of truth for cycle / task / proposal states (spec §7, plan §2.5).
+# Loaded and validated by lib/states/loop-states.ts. Nothing else in the codebase
+# may hard-code a state name or a transition: scripts reject non-canonical states.
+#
+# Shape:
+#   version: <int>
+#   machines:
+#     <machine>:
+#       initial: <state>
+#       states:
+#         <state>:
+#           aliases: []        # optional; accepted on input, never written back
+#           next: []           # states this state may transition to
+#           terminal: true     # optional; terminal states must have no `next`
+#           counter: <field>   # optional; the tl_* field that counts re-entries
+#
+# Validation (enforced on load): every `next` target exists; terminal states have
+# no `next`; non-terminal states have at least one `next`; `initial` exists;
+# aliases never collide with a state name or another alias in the same machine.
+# Alias matching is case-insensitive and treats spaces/hyphens as underscores.
+
+version: 1
+
+machines:
+  # A review/interview/approval/rediscovery cycle (tl_cycle.status).
+  cycle:
+    initial: configured
+    states:
+      configured:
+        aliases: [new, draft, created]
+        next: [running]
+      running:
+        aliases: [open, active, in_progress]
+        next: [escalated, closing]
+      escalated:
+        aliases: [at_risk, blocked]
+        # An escalation is resolved back into `running`, or the cycle wraps up anyway.
+        next: [running, closing]
+      closing:
+        aliases: [wrapping_up, finalizing]
+        next: [closed]
+      closed:
+        aliases: [complete, completed, done, archived]
+        terminal: true
+        next: []
+
+  # A unit of work owned by a human (tl_task.status). `nudged` is re-entrant:
+  # each re-entry increments tl_task.attempt_n, capped by policy max_attempts.
+  task:
+    initial: pending
+    states:
+      pending:
+        aliases: [todo, not_started, open]
+        next: [nudged, done, waived, escalated]
+      nudged:
+        aliases: [reminded, chased]
+        counter: attempt_n
+        next: [nudged, done, waived, escalated]
+      escalated:
+        aliases: [raised, flagged]
+        next: [done, waived]
+      done:
+        aliases: [complete, completed, submitted]
+        terminal: true
+        next: []
+      waived:
+        aliases: [excused, skipped, exempt]
+        terminal: true
+        next: []
+
+  # A decision of record (tl_proposed_action.status). Only decide.mjs moves it.
+  proposal:
+    initial: proposed
+    states:
+      proposed:
+        aliases: [awaiting_decision, pending_decision, open]
+        next: [approved, declined]
+      approved:
+        aliases: [accepted, approve]
+        terminal: true
+        next: []
+      declined:
+        aliases: [rejected, decline, denied]
+        terminal: true
+        next: []
