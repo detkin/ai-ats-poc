@@ -93,9 +93,15 @@ function nudgeRefsByTask(nudges: TlNudge[]): Map<string, string[]> {
   return byTask;
 }
 
-/** Where a moved due date lands: last day of absence + the policy's grace days, 23:59:59Z. */
+/**
+ * Where a moved due date lands. `until` is the **last day of the absence**, inclusive, so the
+ * day the person is actually back is `until + 1`; the policy's grace days are counted from
+ * there. A PTO block ending on a Thursday with `move_due_date_days_after_return: 2` therefore
+ * lands on the Sunday two days after the Friday return, at 23:59:59Z — not on the Saturday,
+ * which would spend one of the grace days on a day the person was still away.
+ */
 function movedDueAt(until: string, daysAfter: number): string {
-  return endOfDay(addDays(until, daysAfter));
+  return endOfDay(addDays(until, daysAfter + 1));
 }
 
 /** Who hears about an escalation (`escalation.escalate_to`), with a safe fallback. */

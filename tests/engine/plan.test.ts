@@ -128,7 +128,8 @@ describe('absence', () => {
     expect(kinds(plan)).toEqual(['move_due_date']);
     const move = only(plan, 'move_due_date')[0];
     expect(policy().absence.move_due_date_days_after_return).toBe(2);
-    expect(move?.to).toBe('2026-09-10T23:59:59Z'); // until + 2 days, end of day
+    // absent through 2026-09-08 → back on 09-09 → +2 grace days → 09-11, end of day.
+    expect(move?.to).toBe('2026-09-11T23:59:59Z');
     expect(move?.from).toBe('2026-09-02T23:59:59Z');
     expect(move?.reason).toContain('absent until 2026-09-08');
     expect(move?.evidence_refs).toEqual(['tl_task_0001']);
@@ -424,9 +425,9 @@ describe('the fixture org, ticked', () => {
       const task = snapshot.tasks.find((t) => t.id === move.task_id);
       return task?.participant_worker_id === 'w_0009';
     });
-    // abs_0001: PTO 2026-08-31 -> 2026-09-03; +2 days per tenant policy.
+    // abs_0001: PTO 2026-08-31 -> 2026-09-03, so back on 09-04; +2 days per tenant policy.
     expect(moves.length).toBeGreaterThan(0);
-    expect(new Set(moves.map((m) => m.to))).toEqual(new Set(['2026-09-05T23:59:59Z']));
+    expect(new Set(moves.map((m) => m.to))).toEqual(new Set(['2026-09-06T23:59:59Z']));
     expect(only(plan, 'nudge').some((n) => n.to_worker_id === 'w_0009')).toBe(false);
   });
 
