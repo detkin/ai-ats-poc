@@ -1,0 +1,23 @@
+{
+  "_comment": "Talent Loops MCP servers (block B0.5). NONE of these is connected: the POC runs on TL_ADAPTER=fixture with no network. Every entry below is a placeholder whose URL is unverified; doctor reports them as `warn` in fixture mode and never `fail`. Replace a URL and remove `_placeholder` only when the tenant admin has provisioned real access. See docs/QUESTIONS.md Q2 and Q3.",
+  "mcpServers": {
+    "rippling": {
+      "type": "http",
+      "url": "https://mcp.rippling.com/mcp",
+      "_placeholder": true,
+      "_comment": "UNVERIFIED placeholder URL — Rippling's first-party remote MCP (launched 2026-08-25) uses per-user OAuth, and no employee has access until a Super/Full Admin creates an MCP Gateway access assignment. The real endpoint must be supplied by the tenant admin along with that assignment; replace this URL then. Until a tenant exists, lib/adapters/rippling/* are stubs that throw RipplingNotConnectedError. Connect when a tenant exists. (docs/research/rippling-06-api-mcp-surface.md)"
+    },
+    "slack": {
+      "type": "http",
+      "url": "https://slack.example.invalid/mcp",
+      "_placeholder": true,
+      "_comment": "Placeholder. Rippling exposes no messaging API, so the POC brings Slack's own MCP for nudges and escalations. Until then the fixture channel adapter writes to TL_DATA_DIR/outbox.jsonl. Connect when a tenant exists."
+    },
+    "google-calendar": {
+      "type": "http",
+      "url": "https://calendar.example.invalid/mcp",
+      "_placeholder": true,
+      "_comment": "Placeholder. Free/busy is the one availability signal Rippling does not expose; Rippling absence stays authoritative and calendar free/busy is secondary (spec §4). Until then the gcal fixture adapter serves busy blocks. Connect when a tenant exists."
+    }
+  }
+}
