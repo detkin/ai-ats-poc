@@ -26,6 +26,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { ADAPTER_MODES } from '#lib/ports/context.ts';
+import type { AdapterMode } from '#lib/ports/context.ts';
+
 /** Environment variables this module owns. Doctor prints these names in its detail. */
 export const ENV_KEYS = {
   adapter: 'TL_ADAPTER',
@@ -37,9 +40,9 @@ export const ENV_KEYS = {
   lockStaleMs: 'TL_LOCK_STALE_MS',
 } as const;
 
-/** Which port implementations the runtime binds. `rippling` is stubs until a tenant exists. */
-export const ADAPTER_MODES = ['fixture', 'rippling'] as const;
-export type AdapterMode = (typeof ADAPTER_MODES)[number];
+/** Re-exported from the ports layer so the union has exactly one definition. */
+export { ADAPTER_MODES } from '#lib/ports/context.ts';
+export type { AdapterMode } from '#lib/ports/context.ts';
 
 /** A per-cycle lock older than this is reclaimable (spec §5, lock row). */
 export const DEFAULT_LOCK_STALE_MS = 10 * 60 * 1000;

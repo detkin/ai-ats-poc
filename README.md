@@ -1,7 +1,7 @@
 # Talent Loops POC
 
 Agent-first talent loops on Rippling: one cycle engine (detect → do → escalate → close) that runs a
-performance review cycle, an interview loop, and a req/offer approval loop as *configurations*, with
+performance review cycle, an interview loop, and a req/offer approval loop as _configurations_, with
 every write logged and every decision of record left to a named human.
 
 - Spec: `docs/SPEC.md` (v0.2). Plan: `docs/PLAN.md`. Status: `docs/PROGRESS.md`.
