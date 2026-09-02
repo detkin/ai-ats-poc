@@ -207,7 +207,8 @@ What to point at in the output:
 
 - **The PTO'd manager.** `w_0009` (Manager, Infrastructure, eight reports) has approved PTO
   from 2026-08-31 to 2026-09-03. Their tasks show **no nudge** and a `move_due_date` to
-  2026-09-05 — two days after they return, per `_tenant.md` — with the absence as the reason.
+  2026-09-06 — they return on 09-04, plus two days per `_tenant.md` — with the absence as the
+  reason.
   `w_0033` is on parental leave into October and moves the same way. `w_0072`'s PTO is
   _pending_, so it is not an absence and they are nudged like anyone else.
 - **One escalation.** Self reviews have been due since 2026-08-24, which is past the tenant's
