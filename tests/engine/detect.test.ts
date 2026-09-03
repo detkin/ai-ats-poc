@@ -172,9 +172,51 @@ describe('detect: cycle-level summary', () => {
       ],
     });
     const detected = detect(snapshot);
+    // Only the undecided one is "open" — but an approved escalation still covers its tasks.
     expect(detected.open_proposal_ids).toEqual(['tl_proposed_action_0001']);
     expect(detected.covered_task_ids.has('tl_task_0001')).toBe(true);
-    expect(detected.covered_task_ids.has('tl_task_0002')).toBe(false);
+    expect(detected.covered_task_ids.has('tl_task_0002')).toBe(true);
+    expect(detected.released_task_ids.size).toBe(0);
+  });
+
+  it('reads the task ids an escalation names in its payload as well as its evidence', () => {
+    const detected = detect(
+      makeSnapshot({
+        tasks: [makeTask('tl_task_0001')],
+        proposals: [
+          makeProposal('tl_proposed_action_0001', {
+            status: 'approved',
+            payload: { task_ids: ['tl_task_0001', 7, null] },
+            evidence_refs: [],
+          }),
+        ],
+      }),
+    );
+    expect([...detected.covered_task_ids]).toEqual(['tl_task_0001']);
+  });
+
+  it('releases the tasks of a declined escalation and covers them again once re-raised', () => {
+    const declined = makeProposal('tl_proposed_action_0001', {
+      status: 'declined',
+      evidence_refs: ['tl_task_0001'],
+    });
+    const first = detect(
+      makeSnapshot({ tasks: [makeTask('tl_task_0001')], proposals: [declined] }),
+    );
+    expect(first.covered_task_ids.has('tl_task_0001')).toBe(false);
+    expect(first.released_task_ids.has('tl_task_0001')).toBe(true);
+
+    // A later standing escalation supersedes the decline: covered wins where both name it.
+    const second = detect(
+      makeSnapshot({
+        tasks: [makeTask('tl_task_0001')],
+        proposals: [
+          declined,
+          makeProposal('tl_proposed_action_0002', { evidence_refs: ['tl_task_0001'] }),
+        ],
+      }),
+    );
+    expect(second.covered_task_ids.has('tl_task_0001')).toBe(true);
   });
 
   it('returns signals sorted by task id', () => {

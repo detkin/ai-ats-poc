@@ -14,6 +14,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { CYCLE_SPEC, runCycle } from '#lib/cli/cycle.ts';
+import { DECIDE_SPEC, runDecide } from '#lib/cli/decide.ts';
 import { TICK_SPEC, runTick } from '#lib/cli/tick.ts';
 import type { TickResult } from '#lib/cli/tick.ts';
 import { acquireLock } from '#lib/lock.ts';
@@ -37,6 +38,14 @@ const designTasks = (): TlTask[] =>
     (task) => task.cycle_id === cycleId,
   );
 const selfTasks = (): TlTask[] => designTasks().filter((task) => task.kind === 'write_self_review');
+/** This cycle's escalation proposals, oldest first — the decide/re-escalate tests index it. */
+const proposalIds = (): string[] =>
+  (readState<'proposed_action'>(dataDir, 'proposed_actions.json') as TlProposedAction[])
+    .filter((proposal) => proposal.cycle_id === cycleId && proposal.kind === 'escalate')
+    .map((proposal) => proposal.id);
+/** Escalation DMs written to the outbox so far — one per escalation, never one per task. */
+const escalationDms = (): number =>
+  readOutbox(dataDir).filter((line) => line.template_id === 'escalation').length;
 
 async function tick(now: string, extra: string[] = []): Promise<TickResult> {
   setNow(now);
@@ -136,6 +145,40 @@ describe('tick cadence', () => {
       readState<'proposed_action'>(dataDir, 'proposed_actions.json') as TlProposedAction[]
     ).filter((proposal) => proposal.cycle_id === cycleId);
     expect(proposals).toHaveLength(1);
+  });
+
+  /**
+   * Block B2.8, the decline half of "a human answered": declining hands the tasks back to the
+   * engine, so a later qualifying tick may raise them once more — but only once. (The approve
+   * half — where the engine goes quiet for good — is `review-cycle.test.ts`, on the M1
+   * scenario the spec §8 demo runs.)
+   */
+  it('re-escalates once after a decline, then goes quiet again', async () => {
+    setNow('2026-08-31T18:00:00Z');
+    const declined = await runJson<TlProposedAction>(DECIDE_SPEC, runDecide, [
+      '--proposal',
+      proposalIds()[0] ?? '',
+      '--by',
+      'w_0021',
+      '--decision',
+      'decline',
+    ]);
+    expect(declined.data.status).toBe('declined');
+
+    const escalationsBefore = escalationDms();
+    const again = await tick('2026-09-01T16:00:00Z');
+    expect(again.escalations).toBe(1);
+    expect(proposalIds()).toHaveLength(2);
+    // The tasks were already `escalated`; that is not a transition, so nothing moved them.
+    expect(designTasks().some((task) => task.status === 'escalated')).toBe(true);
+    // Exactly one new escalation DM for the whole cycle — the re-raise is not a broadcast.
+    expect(escalationDms() - escalationsBefore).toBe(1);
+
+    // …and the re-raised proposal covers those tasks again, so the next tick raises nothing.
+    const quiet = await tick('2026-09-02T16:00:00Z');
+    expect(quiet.escalations).toBe(0);
+    expect(escalationDms() - escalationsBefore).toBe(1);
+    expect(proposalIds()).toHaveLength(2);
   });
 
   it('never exceeds max_attempts on any task', () => {

@@ -25,8 +25,17 @@
  *      bundling all of their eligible tasks (D17). `attend_interview` is never chased: the
  *      slot completes it by observation under rule (b) (D23);
  *   e. overdue past `after_attempts` or `overdue_days` → **one** `escalate` for the whole
- *      cycle, bundling every offender with evidence (spec §8: one escalation, not forty);
- *   f. running + an outstanding escalation → `escalated`; escalated + none → `running`;
+ *      cycle, bundling every offender with evidence (spec §8: one escalation, not forty).
+ *      A task is skipped when an escalation naming it already **stands** — `proposed` *or*
+ *      `approved` (block B2.8). Approval is not resolution: it means a named human now owns
+ *      the problem, and re-raising it would be the fortieth reminder wearing a hat. Only a
+ *      `declined` escalation releases its tasks, and a released task may be escalated again
+ *      on the next tick that still qualifies — that is the intended semantics, because a
+ *      decline says "not this escalation", not "stop watching these tasks". A task sitting in
+ *      status `escalated` is therefore never re-bundled unless its escalation was declined;
+ *   f. running + an outstanding escalation → `escalated`; escalated + none → `running`. An
+ *      `approved` escalation stays outstanding until every task it named is terminal, so the
+ *      cycle does not quietly flip back to `running` while the work is still open;
  *   g. every task terminal and every proposal decided → `closing` + `close_cycle`;
  *   h. calibration inputs hash moved → `refresh_packet`.
  *
@@ -41,7 +50,7 @@
  * Spec: docs/SPEC.md §7, §8 loop 1, §9, §10; docs/PLAN.md §2.5, §2.6.
  */
 
-import { detect } from '#lib/engine/detect.ts';
+import { detect, escalationRefs } from '#lib/engine/detect.ts';
 import { sha256Hex } from '#lib/engine/hash.ts';
 import { isNudgeableKind } from '#lib/engine/interview-loop.ts';
 import { mergeInterviewActions, planInterviewTick } from '#lib/engine/interview-plan.ts';
@@ -205,6 +214,18 @@ function isOffender(signal: TaskSignal, snapshot: TickSnapshot): boolean {
   );
 }
 
+/**
+ * Is this task still the engine's to raise? No, if an escalation naming it stands (`proposed`
+ * or `approved`), and no, if it is parked in `escalated` with nothing declined behind it —
+ * which is the same answer reached from the task's side, and the one that keeps a re-plan
+ * after an approval a no-op.
+ */
+function isEscalatable(signal: TaskSignal, detected: DetectSummary): boolean {
+  if (detected.covered_task_ids.has(signal.task_id)) return false;
+  if (signal.status !== 'escalated') return true;
+  return detected.released_task_ids.has(signal.task_id);
+}
+
 /** Rule (e): one escalation for the cycle, or none. */
 function planEscalation(
   snapshot: TickSnapshot,
@@ -212,7 +233,7 @@ function planEscalation(
   nudgeRefs: Map<string, string[]>,
 ): PlannedEscalate | undefined {
   const offenders = detected.signals.filter(
-    (s) => isOffender(s, snapshot) && !detected.covered_task_ids.has(s.task_id),
+    (s) => isOffender(s, snapshot) && isEscalatable(s, detected),
   );
   if (offenders.length === 0) return undefined;
 
@@ -236,6 +257,34 @@ function planEscalation(
     rationale,
     evidence_refs: evidence,
   };
+}
+
+/**
+ * Rule (f)'s input: is the cycle still waiting on an escalation? A `proposed` one always is —
+ * nobody has answered. An `approved` one is until every task it named is terminal, because
+ * approving an escalation moves the work, it does not finish it; the cycle stays `escalated`
+ * until those tasks reach `done` or `waived`. A `declined` one never is.
+ *
+ * `completedThisTick` counts the tasks rule (b) is closing right now, so the tick that
+ * completes the last escalated task also releases the cycle.
+ */
+function hasStandingEscalation(
+  snapshot: TickSnapshot,
+  detected: DetectSummary,
+  completedThisTick: ReadonlySet<string>,
+): boolean {
+  for (const proposal of snapshot.proposals) {
+    if (proposal.kind !== 'escalate') continue;
+    if (proposal.status === 'proposed') return true;
+    if (proposal.status !== 'approved') continue;
+    for (const ref of escalationRefs(proposal)) {
+      const signal = detected.by_task.get(ref);
+      // Evidence also names nudges; only ids that resolve to a task of this cycle count.
+      if (signal === undefined) continue;
+      if (!signal.terminal && !completedThisTick.has(ref)) return true;
+    }
+  }
+  return false;
 }
 
 /** Rules (f) and (g): the single cycle-status move this tick warrants, if any. */
@@ -337,8 +386,7 @@ export function planTick(snapshot: TickSnapshot): TickPlan {
     (s) => !s.terminal && !completedTaskIds.has(s.task_id),
   );
   const escalationOutstanding =
-    escalation !== undefined ||
-    snapshot.proposals.some((p) => p.status === 'proposed' && p.kind === 'escalate');
+    escalation !== undefined || hasStandingEscalation(snapshot, detected, completedTaskIds);
   const closable =
     detected.signals.length > 0 &&
     openAfterTick.length === 0 &&

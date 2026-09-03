@@ -23,7 +23,13 @@ import {
   openedFixtureCycle,
   policy,
 } from '#tests/engine/helpers.ts';
-import type { PlannedAction, PlannedActionKind, TickPlan } from '#lib/engine/snapshot.ts';
+import type {
+  PlannedAction,
+  PlannedActionKind,
+  TickPlan,
+  TickSnapshot,
+} from '#lib/engine/snapshot.ts';
+import type { TlProposalState } from '#lib/types/engine.ts';
 
 const kinds = (plan: TickPlan): PlannedActionKind[] => plan.actions.map((a) => a.kind);
 const only = <K extends PlannedActionKind>(
@@ -426,6 +432,91 @@ describe('escalation', () => {
       cycle: makeCycle({ status: 'escalated' }),
     });
     expect(planTick(snapshot).actions).toEqual([]);
+  });
+
+  /**
+   * Block B2.8. Approving an escalation is a human taking ownership, not the engine being
+   * told to start again: the tick after the approval must be a no-op. Declining is the
+   * opposite answer — the tasks come back to the engine and may be raised once more.
+   */
+  describe('after a human decides', () => {
+    const twoOffenders = () =>
+      makeSnapshot({
+        tasks: [
+          overdueBy('tl_task_0001', 'w_0001', '2026-08-20T23:59:59Z', 3),
+          overdueBy('tl_task_0002', 'w_0002', '2026-08-20T23:59:59Z', 3),
+        ],
+      });
+
+    /** What `bin/decide.mjs` does to the snapshot: one status field on the proposal. */
+    const decide = (snapshot: TickSnapshot, status: TlProposalState): TickSnapshot => ({
+      ...snapshot,
+      proposals: snapshot.proposals.map((proposal) =>
+        proposal.kind === 'escalate'
+          ? { ...proposal, status, decided_by: 'w_0021', decided_at: TEST_NOW }
+          : proposal,
+      ),
+    });
+
+    /** The snapshot immediately after the escalating tick: proposal open, tasks escalated. */
+    const escalated = (): TickSnapshot => {
+      const snapshot = twoOffenders();
+      const plan = planTick(snapshot);
+      expect(only(plan, 'escalate')).toHaveLength(1);
+      const after = applyPlan(snapshot, plan);
+      expect(after.cycle.status).toBe('escalated');
+      expect(after.tasks.map((task) => task.status)).toEqual(['escalated', 'escalated']);
+      return after;
+    };
+
+    it('raises nothing more once the escalation is approved', () => {
+      const approved = decide(escalated(), 'approved');
+      expect(planTick(approved).actions).toEqual([]);
+      expect(planTick({ ...approved, now: '2026-09-20T16:00:00Z' }).actions).toEqual([]);
+    });
+
+    it('keeps the cycle escalated while an approved escalation is unresolved', () => {
+      const approved = decide(escalated(), 'approved');
+      // Nothing moves the cycle back to `running` — approval did not finish the work.
+      expect(only(planTick(approved), 'transition_cycle')).toHaveLength(0);
+      expect(approved.cycle.status).toBe('escalated');
+
+      const done = {
+        ...approved,
+        tasks: approved.tasks.map((task) => ({ ...task, status: 'done' as const })),
+      };
+      const plan = planTick(done);
+      expect(only(plan, 'transition_cycle')[0]).toMatchObject({
+        from: 'escalated',
+        to: 'closing',
+      });
+    });
+
+    it('re-escalates the still-open offenders once the escalation is declined', () => {
+      const declined = { ...decide(escalated(), 'declined'), now: '2026-09-10T16:00:00Z' };
+      const plan = planTick(declined);
+      const escalations = only(plan, 'escalate');
+      expect(escalations).toHaveLength(1);
+      expect(escalations[0]?.task_ids).toEqual(['tl_task_0001', 'tl_task_0002']);
+
+      // `escalated -> escalated` is not in the states contract, so applying must not attempt
+      // it: the tasks are already there and only the new proposal is added.
+      const after = applyPlan(declined, plan);
+      expect(after.tasks.map((task) => task.status)).toEqual(['escalated', 'escalated']);
+      expect(after.proposals.map((proposal) => proposal.status)).toEqual(['declined', 'proposed']);
+      // …and the re-raised escalation covers them again, so the tick after is a no-op.
+      expect(planTick(after).actions).toEqual([]);
+    });
+
+    it('leaves a declined offender alone once its task is no longer overdue', () => {
+      const declined = decide(escalated(), 'declined');
+      const moved = {
+        ...declined,
+        now: '2026-09-10T16:00:00Z',
+        tasks: declined.tasks.map((task) => ({ ...task, due_at: '2026-10-30T23:59:59Z' })),
+      };
+      expect(only(planTick(moved), 'escalate')).toHaveLength(0);
+    });
   });
 
   it('routes to the department head when policy says so and all offenders share one', () => {

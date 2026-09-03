@@ -24,9 +24,16 @@
  * rule, it is seen by rule (b) *before* the nudge rule can chase a task the tick is about
  * to close.
  *
+ * Block B2.8 corrects one thing about escalation coverage: an escalation covers its tasks
+ * for as long as it *stands*, which means `proposed` (nobody has answered yet) **and**
+ * `approved` (a human said yes and now owns it). Only `declined` releases the tasks. The old
+ * `proposed`-only test made approval look like "no escalation on record", so the next tick
+ * raised a second one — forty reminders by another name (spec §8).
+ *
  * Public interface:
  *   detect(snapshot: TickSnapshot): DetectSummary
  *   isRecipientInCycle(snapshot, workerId): boolean
+ *   escalationRefs(proposal: TlProposedAction): string[]
  *   types re-exported: DetectSummary, TaskSignal, AnomalyFinding
  *
  * Pure: no I/O, no clock (`snapshot.now` is the only "now"), no environment.
@@ -47,7 +54,12 @@ import type {
   TaskSignal,
   TickSnapshot,
 } from '#lib/engine/snapshot.ts';
-import type { TlReviewSubmission, TlScorecard, TlTask } from '#lib/types/engine.ts';
+import type {
+  TlProposedAction,
+  TlReviewSubmission,
+  TlScorecard,
+  TlTask,
+} from '#lib/types/engine.ts';
 import type { WorkerId } from '#lib/types/tier1.ts';
 
 export type { AnomalyFinding, DetectSummary, TaskSignal } from '#lib/engine/snapshot.ts';
@@ -187,6 +199,22 @@ function signalFor(
   return signal;
 }
 
+/**
+ * Every record id an escalation proposal names: its `evidence_refs` *and* the `task_ids` in
+ * its payload. Both are read because they carry different things — the payload is the
+ * authoritative bundle, the evidence adds the nudge ids behind it — and a proposal written by
+ * an older build (or by `bin/propose.mjs` by hand) may name its tasks in only one of them.
+ * The payload is untyped JSON, so non-string entries are ignored rather than trusted.
+ */
+export function escalationRefs(proposal: TlProposedAction): string[] {
+  const refs = [...proposal.evidence_refs];
+  const taskIds = proposal.payload['task_ids'];
+  if (Array.isArray(taskIds)) {
+    for (const id of taskIds) if (typeof id === 'string') refs.push(id);
+  }
+  return refs;
+}
+
 /** Screen untrusted text; drop anything already on record so a re-read is not re-recorded. */
 function findAnomalies(snapshot: TickSnapshot): AnomalyFinding[] {
   const texts = snapshot.untrusted ?? [];
@@ -230,9 +258,13 @@ export function detect(snapshot: TickSnapshot): DetectSummary {
 
   const openProposals = snapshot.proposals.filter((p) => p.status === 'proposed');
   const covered = new Set<string>();
-  for (const proposal of openProposals) {
+  const released = new Set<string>();
+  for (const proposal of snapshot.proposals) {
     if (proposal.kind !== 'escalate') continue;
-    for (const ref of proposal.evidence_refs) covered.add(ref);
+    // `declined` is the only answer that hands the tasks back to the engine; `proposed` and
+    // `approved` both mean an escalation for these tasks is already on somebody's desk.
+    const into = proposal.status === 'declined' ? released : covered;
+    for (const ref of escalationRefs(proposal)) into.add(ref);
   }
 
   const counts = {
@@ -269,6 +301,7 @@ export function detect(snapshot: TickSnapshot): DetectSummary {
     changed_task_ids: signals.filter((s) => s.changed_since_last_tick).map((s) => s.task_id),
     open_proposal_ids: openProposals.map((p) => p.id).sort(),
     covered_task_ids: covered,
+    released_task_ids: released,
     anomalies: findAnomalies(snapshot),
   };
 }

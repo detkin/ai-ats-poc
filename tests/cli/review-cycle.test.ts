@@ -404,6 +404,42 @@ describe('audit', () => {
   });
 });
 
+/**
+ * Block B2.8. The HRBP has approved the one escalation (in `audit` above). Approval is a
+ * human taking ownership, not a signal to start over: the next tick must raise nothing and
+ * send nobody a second escalation DM — spec §8's "one escalation with evidence instead of
+ * forty reminders" has to survive the decision, not just precede it.
+ */
+describe('the tick after the escalation is approved', () => {
+  it('raises nothing, sends nothing, and leaves the cycle escalated', async () => {
+    setNow(ANCHOR);
+    const proposalsBefore = readState<'proposed_action'>(
+      dataDir,
+      'proposed_actions.json',
+    ) as TlProposedAction[];
+    expect(
+      proposalsBefore.filter((row) => row.cycle_id === CYCLE && row.kind === 'escalate'),
+    ).toHaveLength(1);
+    const outboxBefore = readOutbox(dataDir).length;
+
+    const { run, data } = await runJson<TickResult>(TICK_SPEC, runTick, ['--cycle', CYCLE]);
+    expect(run.code).toBe(0);
+    expect(data.changed).toBe(false);
+    expect(data.actions).toEqual([]);
+    expect(data.escalations).toBe(0);
+    expect(readOutbox(dataDir)).toHaveLength(outboxBefore);
+    expect(
+      (readState<'proposed_action'>(dataDir, 'proposed_actions.json') as TlProposedAction[]).filter(
+        (row) => row.cycle_id === CYCLE && row.kind === 'escalate',
+      ),
+    ).toHaveLength(1);
+
+    // …and the cycle stays escalated: approving the escalation did not finish the reviews.
+    const cycles = readState<'cycle'>(dataDir, 'cycles.json');
+    expect(cycles.find((cycle) => cycle.id === CYCLE)?.status).toBe('escalated');
+  });
+});
+
 describe('verify-loops', () => {
   it('passes after the scenario', async () => {
     setNow(ANCHOR);

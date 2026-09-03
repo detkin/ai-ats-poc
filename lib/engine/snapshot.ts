@@ -256,8 +256,18 @@ export interface DetectSummary {
   changed_task_ids: string[];
   /** Proposals still awaiting a human decision. */
   open_proposal_ids: string[];
-  /** `proposed` escalation proposals, and the task ids they already cover. */
+  /**
+   * Record ids named by an escalation that still stands — `proposed` or `approved`. A task in
+   * here is not escalated again: approval means a human owns the problem, not that the engine
+   * may raise it a second time (block B2.8).
+   */
   covered_task_ids: Set<string>;
+  /**
+   * Record ids named only by a **declined** escalation. The human said "not this", so the
+   * engine may raise it again on the next tick that still qualifies. `covered_task_ids` wins
+   * when an id is in both — a later standing escalation supersedes an earlier decline.
+   */
+  released_task_ids: Set<string>;
   /** Instruction attempts in untrusted text that are not yet recorded as `tl_anomaly`. */
   anomalies: AnomalyFinding[];
 }
