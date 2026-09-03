@@ -1,11 +1,10 @@
 {
-  "_comment": "Talent Loops MCP servers (block B0.5). NONE of these is connected: the POC runs on TL_ADAPTER=fixture with no network. Every entry below is a placeholder whose URL is unverified; doctor reports them as `warn` in fixture mode and never `fail`. Replace a URL and remove `_placeholder` only when the tenant admin has provisioned real access. See docs/QUESTIONS.md Q2 and Q3.",
+  "_comment": "Talent Loops MCP servers. rippling is live (see its entry). slack and google-calendar remain placeholders in project scope; both are also connected as claude.ai connectors in the user's client, which the agent (not bin/*) can call. doctor reports placeholders as `warn` in fixture mode.",
   "mcpServers": {
     "rippling": {
       "type": "http",
-      "url": "https://mcp.rippling.com/mcp",
-      "_placeholder": true,
-      "_comment": "UNVERIFIED placeholder URL — Rippling's first-party remote MCP (launched 2026-08-25) uses per-user OAuth, and no employee has access until a Super/Full Admin creates an MCP Gateway access assignment. The real endpoint must be supplied by the tenant admin along with that assignment; replace this URL then. Until a tenant exists, lib/adapters/rippling/* are stubs that throw RipplingNotConnectedError. Connect when a tenant exists. (docs/research/rippling-06-api-mcp-surface.md)"
+      "url": "https://mcpgateway.rippling.com/api/v1/proxy/6a7dd56c1390ca5104254f05/mcp",
+      "_comment": "Rippling first-party remote MCP via MCP Gateway proxy (connected 2026-09-02 as a claude.ai connector; per-user OAuth). Exposes one tool, `code`, over codemode.* functions. Every codemode.* call requires a `telemetry: { intent }` field inside its args. Node-side lib/adapters/rippling/* cannot reach this endpoint directly (the OAuth token lives in the Claude client) \u2014 see docs/DECISIONS.md D25."
     },
     "slack": {
       "type": "http",
@@ -17,7 +16,7 @@
       "type": "http",
       "url": "https://calendar.example.invalid/mcp",
       "_placeholder": true,
-      "_comment": "Placeholder. Free/busy is the one availability signal Rippling does not expose; Rippling absence stays authoritative and calendar free/busy is secondary (spec §4). Until then the gcal fixture adapter serves busy blocks. Connect when a tenant exists."
+      "_comment": "Placeholder. Free/busy is the one availability signal Rippling does not expose; Rippling absence stays authoritative and calendar free/busy is secondary (spec \u00a74). Until then the gcal fixture adapter serves busy blocks. Connect when a tenant exists."
     }
   }
 }

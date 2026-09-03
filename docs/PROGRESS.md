@@ -46,4 +46,6 @@
 
 ## Checkpoint — first run complete (M0–M2)
 
-Next, per user direction: **M2.5 live Rippling smoke** once the Rippling MCP is authorized (`docs/PLAN.md` §7). Then decide on M3–M5.
+## M2.5 — Live Rippling smoke: PARTIAL (2026-09-02)
+
+Report: `docs/testing/live-rippling.md`. Connection verified; all read paths work (people, org tree, departments, locations, leave types, balances, present-tense absence, custom-object listing/describe). Custom-object creation is **blocked by the tenant's object quota** (Q8). Seven fixture assumptions need adapter work (locations have no hours/timezone; absence is present-tense; levels/teams null; people search is by name; departments nest; the MCP is agent-executed, D25). Next block B2.6 is sketched in the report; it waits on Q8 and Q10.
