@@ -16,8 +16,10 @@
  * The rules, applied in this order (docs/PLAN.md §4 block B1.1):
  *   a. instruction attempts in untrusted text become `anomaly` actions and nothing else;
  *   b. a task whose `tl_review_submission` has been submitted → `complete_task`;
- *   c. an absent participant is never nudged; the due date moves once, to
- *      `until + policy.absence.move_due_date_days_after_return` days;
+ *   c. an absent participant is never nudged; if the absence is **approved leave** the due
+ *      date also moves once, to `until + policy.absence.move_due_date_days_after_return`
+ *      days. A public holiday (`absent_source: 'holiday'`) silences the day and moves
+ *      nothing;
  *   d. overdue, present, audible, gap elapsed, attempts left → `nudge`, and the tick emits
  *      **one** `nudge` action per recipient bundling all of their eligible tasks (D17);
  *   e. overdue past `after_attempts` or `overdue_days` → **one** `escalate` for the whole
@@ -275,9 +277,11 @@ export function planTick(snapshot: TickSnapshot): TickPlan {
     }
     if (signal.terminal) continue;
 
-    // (c) Absent: never a nudge; the due date moves once, then stays put.
+    // (c) Absent: never a nudge. Approved leave *also* moves the due date, once; a public
+    //     holiday does not — a deadline does not slip for a whole country every time that
+    //     country has a Monday off.
     if (signal.absent) {
-      if (signal.absent_until === undefined) continue;
+      if (signal.absent_until === undefined || signal.absent_source === 'holiday') continue;
       const to = movedDueAt(signal.absent_until, policy.absence.move_due_date_days_after_return);
       if (parseInstant(to) <= parseInstant(signal.due_at)) continue;
       const reason =

@@ -19,6 +19,10 @@
  *  - **`AvailabilityAnswer.until`** is `AbsenceAnswer.until` from `lib/ports/availability.ts`:
  *    the last day of the absence, inclusive. A moved due date is
  *    `until + policy.absence.move_due_date_days_after_return` days, at 23:59:59Z.
+ *  - **`AvailabilityAnswer.source`** separates the two things "absent" can mean. Approved
+ *    leave (`rippling.absence`) both silences the person and moves their due dates; a public
+ *    holiday only silences the day, because a deadline does not slip for everybody in a
+ *    country every time that country has a Monday off.
  *  - **Nothing here holds a Tier-1 value.** Workers arrive by re-read on every tick
  *    (spec §3); the plan carries record *ids* as evidence, never copied attributes.
  *
@@ -54,6 +58,12 @@ export interface AvailabilityAnswer {
   reason?: string;
   /** Last day of the absence, inclusive (`AbsenceAnswer.until`). */
   until?: DateISO;
+  /**
+   * Which authority said "absent" (`AbsenceAnswer.source`). It matters because the two
+   * answers earn different treatment: approved leave moves a due date, a public holiday
+   * only silences the day. Absent with no source recorded is treated as approved leave.
+   */
+  source?: 'rippling.absence' | 'holiday';
   quiet: boolean;
   quiet_reason?: string;
 }
@@ -122,6 +132,11 @@ export interface TaskSignal {
   absent: boolean;
   absent_until?: DateISO;
   absent_reason?: string;
+  /**
+   * `rippling.absence` (approved leave) or `holiday`. Both suppress the nudge; only approved
+   * leave moves the due date. Undefined means the snapshot did not say, and is read as leave.
+   */
+  absent_source?: 'rippling.absence' | 'holiday';
   quiet: boolean;
   quiet_reason?: string;
   /**

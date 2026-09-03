@@ -280,9 +280,22 @@ TL_NOW=2026-09-07T06:00:00Z node bin/tick.mjs --cycle tl_cycle_h2_2026 --json
   (2026-09-06) has just passed and it is 11:30 on a Monday in Bangalore, so the PTO'd manager
   receives their **first** reminder: one DM, `nudge.write_self_review.first`, `attempt_n: 1`.
   Their eight manager reviews are due later that day and are not in it. Two Bangalore
-  recipients are reached in total, five tasks. Every US participant is quiet twice over — it is
-  23:00 the previous evening for them, and 09-07 is Labor Day — and because the engine treats
-  a holiday as an absence, their due dates move instead (`move_due_date: 349`).
+  recipients are reached in total, five tasks — and that is the tick's entire output
+  (`nudges: 2`, `nudged_tasks: 5`, `move_due_date: 0`).
+- **A holiday silences the day; it does not move the deadline.** Every US participant is
+  unreachable on 09-07 twice over — it is 23:00 the previous evening for them, and Labor Day
+  is a holiday at `loc_sf`, `loc_nyc` and `loc_remote_us`. The engine records them as absent,
+  so nobody is nudged, but **no due date moves**: only approved leave in Rippling
+  (`source: rippling.absence`) moves a date, because a deadline does not slip for a whole
+  country every time that country has a Monday off. Prove it if anyone asks:
+
+  ```sh
+  TL_NOW=2026-09-07T16:00:00Z node bin/tick.mjs --cycle tl_cycle_h2_2026 --json
+  ```
+
+  21:30 in Bangalore, Labor Day everywhere else: zero nudges, zero `move_due_date`, and every
+  `due_at` in the cycle byte-for-byte where it was.
+
 - **No task ever reaches attempt 3.** The cap is three, but `escalation.overdue_days: 3` fires
   first: a task three days overdue is escalated and stops receiving messages. The highest
   `attempt_n` in this run is 2. That is the intended behaviour — past a point the work is

@@ -269,6 +269,52 @@ describe('absence', () => {
     expect(planTick(applyPlan(snapshot, plan)).actions).toEqual([]);
   });
 
+  it('silences a public holiday but does not move the due date', () => {
+    // A holiday is `absent: true` too, so the nudge gate refuses — but a deadline does not
+    // slip for a whole country every time that country has a Monday off.
+    const snapshot = makeSnapshot({
+      tasks: [makeTask('tl_task_0001', { due_at: '2026-09-02T23:59:59Z' })],
+      availability: new Map([
+        [
+          'w_0001',
+          {
+            absent: true,
+            reason: 'Labor Day',
+            until: '2026-09-03',
+            source: 'holiday' as const,
+            quiet: true,
+            quiet_reason: 'holiday',
+          },
+        ],
+      ]),
+    });
+    expect(planTick(snapshot).actions).toEqual([]);
+    const signal = planTick(snapshot).detected.signals[0];
+    expect(signal?.absent).toBe(true);
+    expect(signal?.absent_source).toBe('holiday');
+    expect(policyCheckFor(signal!).passed).toBe(false);
+    expect(policyCheckFor(signal!).absent).toBe(true);
+  });
+
+  it('still moves the due date when the absence is approved leave', () => {
+    const snapshot = makeSnapshot({
+      tasks: [makeTask('tl_task_0001', { due_at: '2026-09-02T23:59:59Z' })],
+      availability: new Map([
+        [
+          'w_0001',
+          {
+            absent: true,
+            reason: 'PTO',
+            until: '2026-09-08',
+            source: 'rippling.absence' as const,
+            quiet: false,
+          },
+        ],
+      ]),
+    });
+    expect(kinds(planTick(snapshot))).toEqual(['move_due_date']);
+  });
+
   it('does not move a due date that is already past the return window', () => {
     expect(planTick(absent('2026-09-08', '2026-09-20T23:59:59Z')).actions).toEqual([]);
   });

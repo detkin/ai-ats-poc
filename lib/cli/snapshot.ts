@@ -131,6 +131,8 @@ async function readAvailability(
     const answer: AvailabilityAnswer = { absent: absence.absent, quiet: quiet.quiet };
     if (absence.reason !== undefined) answer.reason = absence.reason;
     if (absence.until !== undefined) answer.until = absence.until;
+    // Which authority answered: approved leave moves due dates, a holiday only silences.
+    if (absence.absent) answer.source = absence.source;
     if (quiet.reason !== undefined) answer.quiet_reason = quiet.reason;
     answers.set(workerId, answer);
   }

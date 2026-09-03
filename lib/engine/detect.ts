@@ -136,6 +136,7 @@ function signalFor(
   // exactOptionalPropertyTypes: optional keys are omitted, never set to `undefined`.
   if (availability.until !== undefined) signal.absent_until = availability.until;
   if (availability.reason !== undefined) signal.absent_reason = availability.reason;
+  if (availability.source !== undefined) signal.absent_source = availability.source;
   if (availability.quiet_reason !== undefined) signal.quiet_reason = availability.quiet_reason;
   if (submission !== undefined) signal.submission_id = submission.id;
   return signal;

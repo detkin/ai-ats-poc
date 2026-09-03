@@ -449,3 +449,24 @@ describe('verify-loops', () => {
     writeFileSync(path, `${JSON.stringify(rows, null, 2)}\n`, 'utf8');
   });
 });
+
+describe('a public holiday', () => {
+  it('silences the day without moving a single due date', async () => {
+    // 2026-09-07 is Labor Day at loc_sf, loc_nyc and loc_remote_us — and 21:30 in Bangalore,
+    // so every participant is unreachable at this instant. A holiday is `absent: true` for
+    // the nudge gate, but it is not approved leave, so nothing's deadline slips.
+    setNow('2026-09-07T16:00:00Z');
+    const before = new Map(tasks().map((task) => [task.id, task.due_at]));
+
+    const { run, data } = await runJson<TickResult>(TICK_SPEC, runTick, ['--cycle', CYCLE]);
+    expect(run.code).toBe(0);
+    expect(data.actions.filter((action) => action.kind === 'move_due_date')).toEqual([]);
+    expect(data.nudges).toBe(0);
+    expect(data.nudged_tasks).toBe(0);
+
+    // The US participants really were seen as absent — this is the holiday path, not an
+    // empty cycle — and not one due date changed.
+    expect(data.detected.absent).toBeGreaterThan(100);
+    for (const task of tasks()) expect(task.due_at).toBe(before.get(task.id));
+  });
+});
