@@ -1,8 +1,10 @@
-Hi {{first_name}} — following up on your manager review of **{{subject_name}}** for {{cycle_name}}.
+Hi {{first_name}} — following up on {{task_count}} manager review(s) for {{cycle_name}}:
 
-It was due {{due_date}} and the cycle closes {{cycle_deadline}}. Without it this person goes into
-calibration with no manager view.
+{{task_list}}
 
-Reply here if you need the date moved or the review waived.
+The cycle closes {{cycle_deadline}}. Without these, those people go into calibration with no
+manager view.
 
-_Task {{task_id}} · reminder {{attempt_n}} of {{max_attempts}} · sent by the Talent Loops cycle engine._
+Reply here if you need a date moved or a review waived.
+
+_Reminder {{attempt_n}} of {{max_attempts}} · sent by the Talent Loops cycle engine._

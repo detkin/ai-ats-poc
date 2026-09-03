@@ -17,8 +17,12 @@
  * the DM and the record leaves a nudge nobody counted (a duplicate at worst); the reverse
  * order would leave a task claiming a reminder that never arrived.
  *
+ * A reminder is addressed to a **person**, not a task (docs/DECISIONS.md D17): `deliverNudge`
+ * takes a bundle of that person's tasks, sends one DM, and writes one `tl_nudge` per task
+ * carrying the shared `message_ref`. `bin/nudge.mjs --task` is simply a bundle of one.
+ *
  * Public interface: `NUDGE_SPEC`, `runNudge`, `deliverNudge`, `recordBlockedNudge`,
- * `NudgeContext`, `DeliveredNudge`.
+ * `templateIdFor`, `NudgeContext`, `NudgeTargetTask`, `DeliveredNudge`.
  *
  * Spec: docs/SPEC.md §7 step 2, §9, §10; docs/PLAN.md §2.9, §4 block B1.3.
  */
@@ -28,9 +32,10 @@ import type { Runtime } from '#lib/adapters/index.ts';
 import type { Args, CliSpec } from '#lib/cli/args.ts';
 import { fail, ok } from '#lib/cli/output.ts';
 import type { CliOutput } from '#lib/cli/output.ts';
-import { CliError, openRuntime } from '#lib/cli/runtime.ts';
+import { CliError, openRuntimeForRecord } from '#lib/cli/runtime.ts';
 import { buildSnapshot } from '#lib/cli/snapshot.ts';
 import { nudgeFacts, renderTemplate } from '#lib/cli/templates.ts';
+import type { NudgeFactTask } from '#lib/cli/templates.ts';
 import type { Config } from '#lib/config.ts';
 import { detect, nudgeTemplateId, policyCheckFor } from '#lib/engine/index.ts';
 import type { TaskSignal } from '#lib/engine/index.ts';
@@ -62,20 +67,31 @@ export const NUDGE_SPEC: CliSpec = {
   ],
 };
 
-/** Everything one nudge needs that is not derivable from the task itself. */
+/** One task inside a bundled reminder, with the attempt it is about to spend. */
+export interface NudgeTargetTask extends NudgeFactTask {
+  /** The attempt this task's nudge *will be* — `task.attempt_n + 1`. */
+  attemptN: number;
+}
+
+/** Everything one bundled reminder needs that is not derivable from the tasks themselves. */
 export interface NudgeContext {
   cycle: TlCycle;
-  task: TlTask;
+  /** Who the single DM goes to. */
+  toWorkerId: WorkerId;
   recipient: Worker | undefined;
-  subject: Worker | undefined;
+  /** The bundle — at least one task, all owed by `toWorkerId`. */
+  tasks: readonly NudgeTargetTask[];
   templateId: string;
+  /** The DM's own attempt number: the highest in the bundle. */
   attemptN: number;
   policyCheck: TlNudgePolicyCheck;
 }
 
 export interface DeliveredNudge {
-  nudge: TlNudge;
-  task: TlTask;
+  /** One `tl_nudge` per bundled task, all sharing `message_ref`. */
+  nudges: TlNudge[];
+  /** The bundled tasks, as the state adapter left them. */
+  tasks: TlTask[];
   message_ref: string;
   text: string;
 }
@@ -86,51 +102,61 @@ export function templateIdFor(task: TlTask, attemptN: number, override?: string)
 }
 
 /**
- * Send the DM, record the `tl_nudge`, then move the task to `nudged` with the new
- * `attempt_n`. Every step goes through a ledgered port.
+ * Send **one** DM covering the whole bundle, record one `tl_nudge` per bundled task with
+ * that message's `message_ref`, then move each task to `nudged` with its own `attempt_n`
+ * (docs/DECISIONS.md D17). Every step goes through a ledgered port.
  */
 export async function deliverNudge(
   rt: Runtime,
   config: Config,
   context: NudgeContext,
 ): Promise<DeliveredNudge> {
-  const text = renderTemplate(config, context.templateId, {
-    ...nudgeFacts({
-      task: context.task,
+  const text = renderTemplate(
+    config,
+    context.templateId,
+    nudgeFacts({
+      tasks: context.tasks,
       cycle: context.cycle,
+      toWorkerId: context.toWorkerId,
       recipient: context.recipient,
-      subject: context.subject,
       attemptN: context.attemptN,
       maxAttempts: rt.policy.cadence.max_attempts,
     }),
-  });
+  );
 
   const delivery = await rt.ports.channel.sendDirect({
-    to_worker_id: context.task.participant_worker_id,
+    to_worker_id: context.toWorkerId,
     text,
     template_id: context.templateId,
   });
 
   const now = toInstant(rt.now());
-  const nudge = await rt.ports.state.create('nudge', {
-    task_id: context.task.id,
-    cycle_id: context.cycle.id,
-    channel: rt.policy.channels.nudge,
-    sent_at: now,
-    attempt_n: context.attemptN,
-    template_id: context.templateId,
-    delivered: delivery.delivered,
-    message_ref: delivery.message_ref,
-    policy_check: context.policyCheck,
-  });
+  const nudges: TlNudge[] = [];
+  const tasks: TlTask[] = [];
+  for (const entry of context.tasks) {
+    nudges.push(
+      await rt.ports.state.create('nudge', {
+        task_id: entry.task.id,
+        cycle_id: context.cycle.id,
+        channel: rt.policy.channels.nudge,
+        sent_at: now,
+        attempt_n: entry.attemptN,
+        template_id: context.templateId,
+        delivered: delivery.delivered,
+        message_ref: delivery.message_ref,
+        policy_check: context.policyCheck,
+      }),
+    );
+    tasks.push(
+      await rt.ports.state.update('task', entry.task.id, {
+        status: 'nudged',
+        attempt_n: entry.attemptN,
+        nudged_at: now,
+      }),
+    );
+  }
 
-  const task = await rt.ports.state.update('task', context.task.id, {
-    status: 'nudged',
-    attempt_n: context.attemptN,
-    nudged_at: now,
-  });
-
-  return { nudge, task, message_ref: delivery.message_ref, text };
+  return { nudges, tasks, message_ref: delivery.message_ref, text };
 }
 
 /**
@@ -139,7 +165,13 @@ export async function deliverNudge(
  */
 export async function recordBlockedNudge(
   rt: Runtime,
-  context: Omit<NudgeContext, 'recipient' | 'subject'>,
+  context: {
+    cycle: TlCycle;
+    task: TlTask;
+    templateId: string;
+    attemptN: number;
+    policyCheck: TlNudgePolicyCheck;
+  },
 ): Promise<TlNudge> {
   return rt.ports.state.create('nudge', {
     task_id: context.task.id,
@@ -164,7 +196,13 @@ function describeCheck(check: TlNudgePolicyCheck): string[] {
   ];
 }
 
-/** Locate the task's signal by ticking `detect` over its cycle. */
+/**
+ * Locate the task's signal by ticking `detect` over its cycle.
+ *
+ * The task is resolved through `openRuntimeForRecord`, so the runtime this returns is
+ * already scoped to the task's cycle and every ledger line it writes carries `cycle_id`
+ * (docs/DECISIONS.md D19) — `audit.mjs --cycle` sees a standalone nudge.
+ */
 async function signalForTask(taskId: string): Promise<{
   rt: Runtime;
   config: Config;
@@ -173,20 +211,20 @@ async function signalForTask(taskId: string): Promise<{
   signal: TaskSignal;
   workers: Map<WorkerId, Worker>;
 }> {
-  const probe = openRuntime();
-  const task = await probe.rt.ports.state.get('task', taskId);
-  if (task === null) {
+  const { opened, record } = await openRuntimeForRecord('task', taskId);
+  if (record === null) {
     throw new CliError('TASK_NOT_FOUND', `no task with id "${taskId}" in the runtime state.`);
   }
 
-  const { snapshot, cycle, workers } = await buildSnapshot(probe.rt, task.cycle_id, probe.now, {
+  const { snapshot, cycle, workers } = await buildSnapshot(opened.rt, record.cycle_id, opened.now, {
     withLastTick: false,
   });
+  const task = snapshot.tasks.find((row) => row.id === record.id) ?? record;
   const signal = detect(snapshot).by_task.get(task.id);
   if (signal === undefined) {
     throw new CliError('TASK_NOT_IN_CYCLE', `task "${taskId}" is not part of cycle ${cycle.id}.`);
   }
-  return { rt: probe.rt, config: probe.config, cycle, task, signal, workers };
+  return { rt: opened.rt, config: opened.config, cycle, task, signal, workers };
 }
 
 export async function runNudge(args: Args): Promise<CliOutput> {
@@ -225,19 +263,27 @@ export async function runNudge(args: Args): Promise<CliOutput> {
     ]);
   }
 
+  // `--task` names one task, so this is a bundle of one (docs/DECISIONS.md D17).
   const delivered = await deliverNudge(rt, config, {
     cycle,
-    task,
+    toWorkerId: task.participant_worker_id,
     recipient: workers.get(task.participant_worker_id),
-    subject: task.external_ref === null ? undefined : workers.get(task.external_ref),
+    tasks: [
+      {
+        task,
+        attemptN,
+        subject: task.external_ref === null ? undefined : workers.get(task.external_ref),
+      },
+    ],
     templateId,
     attemptN,
     policyCheck: check,
   });
 
-  return ok({ ...delivered.nudge, sent: true }, [
+  const nudge = delivered.nudges[0] as TlNudge;
+  return ok({ ...nudge, sent: true }, [
     `Nudged ${task.participant_worker_id} about ${task.id} (${task.kind}).`,
-    `  nudge     ${delivered.nudge.id}, attempt ${attemptN} of ${rt.policy.cadence.max_attempts}`,
+    `  nudge     ${nudge.id}, attempt ${attemptN} of ${rt.policy.cadence.max_attempts}`,
     `  template  ${templateId}`,
     `  message   ${delivered.message_ref} on ${rt.policy.channels.nudge}`,
   ]);

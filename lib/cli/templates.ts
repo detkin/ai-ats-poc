@@ -6,13 +6,15 @@
  * the executor fills them from records it already read. That is what makes a tick
  * reproducible, cheap, and safe to run on a schedule.
  *
- * Template ids come from the engine — `nudgeTemplateId(kind, attemptN)` yields
- * `nudge.<task_kind>.<first|followup>` — so a new task kind needs a new file, not new code.
+ * Template ids come from the engine — `bundleTemplateId(kinds, attemptN)` yields
+ * `nudge.<task_kind>.<first|followup>` when a bundled DM covers one kind of task and
+ * `nudge.multi.<first|followup>` when it covers several — so a new task kind needs a new
+ * file, not new code.
  * `escalation` is the one non-nudge template: the DM that tells the escalation recipient a
  * `tl_proposed_action` is waiting for them.
  *
  * Public interface: `NUDGE_TEMPLATE_DIR`, `ESCALATION_TEMPLATE_ID`, `templatePath`,
- * `renderTemplate`, `nudgeFacts`, `escalationFacts`, `TemplateFacts`.
+ * `renderTemplate`, `nudgeFacts`, `escalationFacts`, `TemplateFacts`, `NudgeFactTask`.
  *
  * An unresolved `{{placeholder}}` is an error, never an empty string: a nudge that says
  * "Hi ," has already failed, and failing loudly in the executor is cheaper than in a DM.
@@ -27,7 +29,7 @@ import { join } from 'node:path';
 import { CliError } from '#lib/cli/runtime.ts';
 import type { Config } from '#lib/config.ts';
 import { dateOf } from '#lib/engine/index.ts';
-import type { TlCycle, TlTask } from '#lib/types/engine.ts';
+import type { TlCycle, TlTask, TlTaskKind } from '#lib/types/engine.ts';
 import type { Worker } from '#lib/types/tier1.ts';
 
 /** Where the templates live, relative to the repo root. */
@@ -91,28 +93,83 @@ function fullName(worker: Worker | undefined, fallback: string): string {
   return `${worker.first_name} ${worker.last_name}`;
 }
 
+/** How a task kind reads in a reminder's bullet list. */
+const TASK_LABELS: Readonly<Record<TlTaskKind, string>> = {
+  write_self_review: 'self review',
+  write_peer_review: 'peer review',
+  write_manager_review: 'manager review',
+  submit_scorecard: 'interview scorecard',
+  approve_req: 'requisition approval',
+  enter_comp: 'compensation entry',
+  attend_interview: 'interview',
+};
+
+/** One task of a bundled reminder: the record, and the person it is about. */
+export interface NudgeFactTask {
+  task: TlTask;
+  /** The review subject (`task.external_ref`), when it resolves to a worker. */
+  subject: Worker | undefined;
+}
+
+/** `- peer review of Ada Lovelace — due 2026-08-31`, one line per bundled task. */
+function taskList(tasks: readonly NudgeFactTask[], recipientId: string): string {
+  return tasks
+    .map((entry) => {
+      const label = TASK_LABELS[entry.task.kind];
+      const about =
+        entry.task.external_ref === null || entry.task.external_ref === recipientId
+          ? ''
+          : ` of ${fullName(entry.subject, entry.task.external_ref)}`;
+      return `- ${label}${about} — due ${dateOf(entry.task.due_at)}`;
+    })
+    .join('\n');
+}
+
+/** The earliest instant among the bundled tasks, by the given field. */
+function earliest(tasks: readonly NudgeFactTask[], pick: (task: TlTask) => string): string {
+  return tasks.map((entry) => pick(entry.task)).sort()[0] ?? '';
+}
+
 /**
- * The facts every nudge template may use. `subject_name` is the person the review is
- * *about* (`tl_task.external_ref`); for a self review that is the recipient.
+ * The facts every nudge template may use. One DM covers every task one person owes this
+ * tick (docs/DECISIONS.md D17), so the bundle-shaped facts are the ones templates should
+ * reach for: `{{task_list}}` (markdown bullets: kind, subject, due date) and
+ * `{{task_count}}`. The scalar facts describe the bundle as a whole — `subject_name` is
+ * every subject joined, `due_date` and `original_due_date` are the earliest in the bundle,
+ * `task_id` is every bundled id joined — so a one-task bundle reads exactly as before.
  */
 export function nudgeFacts(input: {
-  task: TlTask;
+  tasks: readonly NudgeFactTask[];
   cycle: TlCycle;
+  toWorkerId: string;
   recipient: Worker | undefined;
-  subject: Worker | undefined;
   attemptN: number;
   maxAttempts: number;
 }): TemplateFacts {
+  const { tasks } = input;
+  if (tasks.length === 0) {
+    throw new CliError('EMPTY_NUDGE_BUNDLE', 'a nudge must cover at least one task');
+  }
+  const subjects = [
+    ...new Set(
+      tasks
+        .filter((entry) => entry.task.external_ref !== input.toWorkerId)
+        .map((entry) => fullName(entry.subject, entry.task.external_ref ?? 'the subject')),
+    ),
+  ];
+
   return {
-    first_name: callName(input.recipient, input.task.participant_worker_id),
-    subject_name: fullName(input.subject, input.task.external_ref ?? 'the subject'),
-    due_date: dateOf(input.task.due_at),
-    original_due_date: dateOf(input.task.original_due_at),
+    first_name: callName(input.recipient, input.toWorkerId),
+    subject_name: subjects.length === 0 ? 'you' : subjects.join(', '),
+    due_date: dateOf(earliest(tasks, (task) => task.due_at)),
+    original_due_date: dateOf(earliest(tasks, (task) => task.original_due_at)),
     attempt_n: String(input.attemptN),
     max_attempts: String(input.maxAttempts),
     cycle_name: input.cycle.name,
     cycle_deadline: dateOf(input.cycle.deadline),
-    task_id: input.task.id,
+    task_id: tasks.map((entry) => entry.task.id).join(', '),
+    task_count: String(tasks.length),
+    task_list: taskList(tasks, input.toWorkerId),
   };
 }
 

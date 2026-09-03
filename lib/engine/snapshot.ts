@@ -7,8 +7,8 @@
  * through the ports so every write is ledgered. The engine itself never calls a port.
  *
  * Public interface: `TickSnapshot`, `AvailabilityAnswer`, `UntrustedText`, `LastTick`,
- * `TickPlan`, `PlannedAction` (+ each member type), `DetectSummary`, `TaskSignal`,
- * `PLANNED_ACTION_KINDS`.
+ * `TickPlan`, `PlannedAction` (+ each member type), `PlannedNudgeTask`, `DetectSummary`,
+ * `TaskSignal`, `PLANNED_ACTION_KINDS`.
  *
  * Conventions this block establishes (see also the report to the orchestrator):
  *  - **`tl_task.external_ref` is the review subject's worker id** for the three review task
@@ -124,7 +124,12 @@ export interface TaskSignal {
   absent_reason?: string;
   quiet: boolean;
   quiet_reason?: string;
-  /** `now − nudged_at ≥ policy.cadence.nudge_min_gap_hours` (true when never nudged). */
+  /**
+   * `now − <the recipient's latest nudged_at in this cycle> ≥
+   * policy.cadence.nudge_min_gap_hours` (true when they have never been nudged). The gap is
+   * measured **per recipient**, not per task (docs/DECISIONS.md D17): one person, one
+   * reminder per cadence window, however many tasks they owe.
+   */
   nudge_gap_ok: boolean;
   attempt_n: number;
   attempts_left: number;
@@ -191,14 +196,34 @@ interface PlannedActionBase {
   evidence_refs: string[];
 }
 
-/** Send one policy-checked reminder. Executed by `bin/nudge.mjs` / the tick. */
+/** One task inside a bundled nudge. */
+export interface PlannedNudgeTask {
+  task_id: string;
+  kind: TlTaskKind;
+  /** The attempt this task's nudge *will be* — `tl_task.attempt_n + 1`. */
+  attempt_n: number;
+}
+
+/**
+ * Send **one** policy-checked reminder to one person, covering every task of theirs that
+ * cleared the gate this tick (docs/DECISIONS.md D17). Exactly one `nudge` action per
+ * recipient per tick: the executor sends one `channel.sendDirect` and writes one `tl_nudge`
+ * per bundled task, all carrying that message's `message_ref` and this `policy_check`.
+ *
+ * `attempt_n` is the **DM's** attempt number — the maximum across `tasks` — and is what
+ * picks `first` vs `followup`; each task's own attempt number lives in `tasks[].attempt_n`,
+ * because tasks in one bundle can be at different points on the ladder.
+ */
 export interface PlannedNudge extends PlannedActionBase {
   kind: 'nudge';
-  task_id: string;
   to_worker_id: WorkerId;
+  /** The bundled task ids, in plan order (sorted by task id). */
+  task_ids: string[];
+  tasks: PlannedNudgeTask[];
   template_id: string;
-  /** The attempt this nudge *will be* — `tl_task.attempt_n + 1`. */
+  /** The highest `attempt_n` in `tasks` — the reminder number the DM prints. */
   attempt_n: number;
+  /** Every bundled task passed the same gate; each `tl_nudge` records this check. */
   policy_check: TlNudgePolicyCheck;
 }
 

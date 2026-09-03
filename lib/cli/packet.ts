@@ -32,7 +32,7 @@ import { UsageError } from '#lib/cli/args.ts';
 import type { Args, CliSpec } from '#lib/cli/args.ts';
 import { ok } from '#lib/cli/output.ts';
 import type { CliOutput } from '#lib/cli/output.ts';
-import { CliError, openRuntime } from '#lib/cli/runtime.ts';
+import { CliError, openRuntime, openRuntimeForRecord } from '#lib/cli/runtime.ts';
 import { calibrationInputsFor, loadCycle } from '#lib/cli/snapshot.ts';
 import type { Config } from '#lib/config.ts';
 import { assembleCalibration, participantsFor } from '#lib/engine/index.ts';
@@ -238,8 +238,9 @@ export async function runPacket(args: Args): Promise<CliOutput> {
 
   if (command === 'show') {
     const packetId = args.require('packet');
-    const { rt } = openRuntime();
-    const packet = await showPacket(rt, packetId);
+    // Scoped to the packet's own cycle, so the ledgered read lands in `audit --cycle` (D19).
+    const { opened } = await openRuntimeForRecord('packet', packetId);
+    const packet = await showPacket(opened.rt, packetId);
     return ok(packet, [packet.body.trimEnd()]);
   }
 

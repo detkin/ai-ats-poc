@@ -1,8 +1,10 @@
-Hi {{first_name}} — your manager review of **{{subject_name}}** for {{cycle_name}} is open.
+Hi {{first_name}} — {{task_count}} manager review(s) for {{cycle_name}} are open:
 
-It was due {{due_date}}. Their self review and peer reviews are already in the packet, so this is
-the last piece before calibration on {{cycle_deadline}}.
+{{task_list}}
 
-Reply here if the date needs to move.
+The self reviews and peer reviews are already in the packet, so this is the last piece before
+calibration on {{cycle_deadline}}.
 
-_Task {{task_id}} · reminder {{attempt_n}} of {{max_attempts}} · sent by the Talent Loops cycle engine._
+Reply here if a date needs to move.
+
+_Reminder {{attempt_n}} of {{max_attempts}} · sent by the Talent Loops cycle engine._

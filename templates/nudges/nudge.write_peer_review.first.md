@@ -1,8 +1,10 @@
-Hi {{first_name}} — you were asked for a peer review of **{{subject_name}}** in {{cycle_name}}.
+Hi {{first_name}} — {{cycle_name}} is waiting on {{task_count}} peer review(s) from you:
 
-It was due {{due_date}}. Two or three specific examples are worth more than a paragraph of
-adjectives; the calibration meeting reads these, not summaries of them.
+{{task_list}}
 
-Reply here if you would rather not review this person and I will reassign it.
+Two or three specific examples are worth more than a paragraph of adjectives; the calibration
+meeting reads these, not summaries of them.
 
-_Task {{task_id}} · reminder {{attempt_n}} of {{max_attempts}} · sent by the Talent Loops cycle engine._
+Reply here if you would rather not review someone and I will reassign it.
+
+_Reminder {{attempt_n}} of {{max_attempts}} · sent by the Talent Loops cycle engine._

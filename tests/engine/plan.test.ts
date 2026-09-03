@@ -43,6 +43,7 @@ describe('nudge', () => {
     expect(nudges).toHaveLength(1);
     const nudge = nudges[0];
     expect(nudge?.to_worker_id).toBe('w_0001');
+    expect(nudge?.task_ids).toEqual(['tl_task_0001']);
     expect(nudge?.attempt_n).toBe(1);
     expect(nudge?.template_id).toBe(nudgeTemplateId('write_self_review', 1));
     expect(nudge?.evidence_refs).toContain('tl_task_0001');
@@ -54,6 +55,136 @@ describe('nudge', () => {
       passed: true,
       reasons: [],
     });
+  });
+
+  it('bundles one recipient into exactly one nudge action', () => {
+    // Three tasks, one person, two kinds — one DM, listing all three.
+    const snapshot = makeSnapshot({
+      tasks: [
+        makeTask('tl_task_0001', { due_at: '2026-09-02T23:59:59Z' }),
+        makeTask('tl_task_0002', {
+          due_at: '2026-09-02T23:59:59Z',
+          kind: 'write_peer_review',
+          external_ref: 'w_0002',
+        }),
+        makeTask('tl_task_0003', {
+          due_at: '2026-09-02T23:59:59Z',
+          kind: 'write_peer_review',
+          external_ref: 'w_0003',
+        }),
+      ],
+    });
+    const nudges = only(planTick(snapshot), 'nudge');
+    expect(nudges).toHaveLength(1);
+    expect(nudges[0]?.to_worker_id).toBe('w_0001');
+    expect(nudges[0]?.task_ids).toEqual(['tl_task_0001', 'tl_task_0002', 'tl_task_0003']);
+    expect(nudges[0]?.tasks.map((task) => task.attempt_n)).toEqual([1, 1, 1]);
+    expect(nudges[0]?.attempt_n).toBe(1);
+    // Mixed kinds → the bundle template, not one kind's template.
+    expect(nudges[0]?.template_id).toBe('nudge.multi.first');
+    expect(nudges[0]?.evidence_refs).toEqual(['tl_task_0001', 'tl_task_0002', 'tl_task_0003']);
+
+    // Executing it moves every bundled task, and a second tick has nothing left to do.
+    const after = applyPlan(snapshot, planTick(snapshot));
+    expect(after.tasks.every((task) => task.status === 'nudged' && task.attempt_n === 1)).toBe(
+      true,
+    );
+    expect(after.nudges).toHaveLength(3);
+    expect(new Set(after.nudges.map((nudge) => nudge.message_ref)).size).toBe(1);
+    expect(planTick(after).actions).toEqual([]);
+  });
+
+  it('uses the kind template when every bundled task shares a kind', () => {
+    const snapshot = makeSnapshot({
+      tasks: [
+        makeTask('tl_task_0001', {
+          due_at: '2026-09-02T23:59:59Z',
+          kind: 'write_peer_review',
+          external_ref: 'w_0002',
+        }),
+        makeTask('tl_task_0002', {
+          due_at: '2026-09-02T23:59:59Z',
+          kind: 'write_peer_review',
+          external_ref: 'w_0003',
+        }),
+      ],
+    });
+    expect(only(planTick(snapshot), 'nudge')[0]?.template_id).toBe('nudge.write_peer_review.first');
+  });
+
+  it('sends one DM per recipient, never two', () => {
+    const snapshot = makeSnapshot({
+      tasks: [
+        makeTask('tl_task_0001', { due_at: '2026-09-02T23:59:59Z' }),
+        makeTask('tl_task_0002', { due_at: '2026-09-02T23:59:59Z' }),
+        makeTask('tl_task_0003', {
+          due_at: '2026-09-02T23:59:59Z',
+          participant_worker_id: 'w_0002',
+          external_ref: 'w_0002',
+        }),
+      ],
+    });
+    const nudges = only(planTick(snapshot), 'nudge');
+    expect(nudges.map((nudge) => nudge.to_worker_id)).toEqual(['w_0001', 'w_0002']);
+    expect(nudges[0]?.task_ids).toHaveLength(2);
+    expect(nudges[1]?.task_ids).toEqual(['tl_task_0003']);
+  });
+
+  it('measures the gap per recipient, not per task', () => {
+    // One task nudged 24 h ago; the gap is 48 h, so their *other* overdue task waits too.
+    const snapshot = makeSnapshot({
+      tasks: [
+        makeTask('tl_task_0001', {
+          due_at: '2026-09-01T23:59:59Z',
+          status: 'nudged',
+          attempt_n: 1,
+          nudged_at: '2026-09-02T16:00:00Z',
+        }),
+        makeTask('tl_task_0002', {
+          due_at: '2026-09-01T23:59:59Z',
+          kind: 'write_peer_review',
+          external_ref: 'w_0002',
+        }),
+      ],
+    });
+    expect(policy().cadence.nudge_min_gap_hours).toBe(48);
+    expect(only(planTick(snapshot), 'nudge')).toHaveLength(0);
+    expect(planTick(snapshot).detected.signals.every((signal) => !signal.nudge_gap_ok)).toBe(true);
+  });
+
+  it('drops a task at max_attempts out of the bundle, and nudges the rest', () => {
+    const snapshot = makeSnapshot({
+      tasks: [
+        makeTask('tl_task_0001', {
+          due_at: '2026-09-02T23:59:59Z',
+          status: 'nudged',
+          attempt_n: 3, // cadence.max_attempts
+        }),
+        makeTask('tl_task_0002', {
+          due_at: '2026-09-02T23:59:59Z',
+          kind: 'write_peer_review',
+          external_ref: 'w_0002',
+        }),
+      ],
+    });
+    expect(policy().cadence.max_attempts).toBe(3);
+    const nudges = only(planTick(snapshot), 'nudge');
+    expect(nudges).toHaveLength(1);
+    expect(nudges[0]?.task_ids).toEqual(['tl_task_0002']);
+    expect(nudges[0]?.template_id).toBe('nudge.write_peer_review.first');
+  });
+
+  it('sends nothing when every one of a recipient tasks is at the cap', () => {
+    const snapshot = makeSnapshot({
+      tasks: [
+        makeTask('tl_task_0001', {
+          due_at: '2026-09-02T23:59:59Z',
+          status: 'nudged',
+          attempt_n: 3,
+        }),
+      ],
+    });
+    expect(only(planTick(snapshot), 'nudge')).toHaveLength(0);
   });
 
   it('does not nudge a task that is not yet due', () => {
@@ -398,7 +529,13 @@ describe('the fixture org, ticked', () => {
 
     const first = planTick(snapshot);
     expect(first.changed).toBe(true);
-    expect(only(first, 'nudge').length).toBeGreaterThan(100);
+    // One action per *recipient*, covering more tasks than there are recipients (D17).
+    const firstNudges = only(first, 'nudge');
+    expect(firstNudges.length).toBeGreaterThan(50);
+    expect(new Set(firstNudges.map((n) => n.to_worker_id)).size).toBe(firstNudges.length);
+    expect(firstNudges.reduce((sum, n) => sum + n.tasks.length, 0)).toBeGreaterThan(
+      firstNudges.length,
+    );
     expect(only(first, 'move_due_date').length).toBeGreaterThan(0);
     expect(only(first, 'escalate')).toHaveLength(1);
     expect(only(first, 'anomaly')).toHaveLength(1);

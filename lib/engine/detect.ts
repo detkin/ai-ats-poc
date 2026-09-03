@@ -6,6 +6,11 @@
  * hours, nudge gap, attempts left, "has the shadow record appeared", and the diff against
  * the previous tick all live here so `plan.ts` reads as a list of policy rules.
  *
+ * One asymmetry worth knowing: `attempts_left` is per **task**, but `nudge_gap_ok` is per
+ * **recipient** — the latest `nudged_at` across every task that person owes in this cycle
+ * (docs/DECISIONS.md D17). A task at the attempts cap drops out of its owner's bundle; a
+ * recipient inside the cadence window hears nothing at all.
+ *
  * Public interface:
  *   detect(snapshot: TickSnapshot): DetectSummary
  *   isRecipientInCycle(snapshot, workerId): boolean
@@ -74,10 +79,28 @@ function submissionFor(
   return index.get([task.cycle_id, task.external_ref, task.participant_worker_id, kind].join('|'));
 }
 
+/**
+ * The latest `nudged_at` per recipient across the whole cycle. The cadence gap is measured
+ * per **person**, not per task (docs/DECISIONS.md D17): somebody who owes four reviews hears
+ * from the engine once per `nudge_min_gap_hours`, not four times.
+ */
+function latestNudgeByRecipient(tasks: readonly TlTask[]): Map<WorkerId, string> {
+  const latest = new Map<WorkerId, string>();
+  for (const task of tasks) {
+    if (task.nudged_at === undefined) continue;
+    const current = latest.get(task.participant_worker_id);
+    if (current === undefined || parseInstant(task.nudged_at) > parseInstant(current)) {
+      latest.set(task.participant_worker_id, task.nudged_at);
+    }
+  }
+  return latest;
+}
+
 function signalFor(
   snapshot: TickSnapshot,
   task: TlTask,
   submissionIndex: Map<string, TlReviewSubmission>,
+  lastNudgedAt: string | undefined,
 ): TaskSignal {
   const { policy, now } = snapshot;
   const availability = snapshot.availability.get(task.participant_worker_id) ?? NO_ANSWER;
@@ -102,8 +125,8 @@ function signalFor(
     absent: availability.absent,
     quiet: availability.quiet,
     nudge_gap_ok:
-      task.nudged_at === undefined ||
-      hoursBetween(task.nudged_at, now) >= policy.cadence.nudge_min_gap_hours,
+      lastNudgedAt === undefined ||
+      hoursBetween(lastNudgedAt, now) >= policy.cadence.nudge_min_gap_hours,
     attempt_n: task.attempt_n,
     attempts_left: Math.max(0, policy.cadence.max_attempts - task.attempt_n),
     recipient_in_cycle: isRecipientInCycle(snapshot, task.participant_worker_id),
@@ -144,7 +167,10 @@ function findAnomalies(snapshot: TickSnapshot): AnomalyFinding[] {
 export function detect(snapshot: TickSnapshot): DetectSummary {
   const submissionIndex = indexSubmissions(snapshot.submissions);
   const tasks = [...snapshot.tasks].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  const signals = tasks.map((task) => signalFor(snapshot, task, submissionIndex));
+  const lastNudged = latestNudgeByRecipient(snapshot.tasks);
+  const signals = tasks.map((task) =>
+    signalFor(snapshot, task, submissionIndex, lastNudged.get(task.participant_worker_id)),
+  );
 
   const byTask = new Map<string, TaskSignal>();
   for (const signal of signals) byTask.set(signal.task_id, signal);

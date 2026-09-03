@@ -23,7 +23,13 @@ export {
   FORBIDDEN_WORDS,
 } from '#lib/engine/packet.ts';
 export type { CalibrationInputs, CalibrationPacket } from '#lib/engine/packet.ts';
-export { nudgeTemplateId, planTick, policyCheckFor, tickId } from '#lib/engine/plan.ts';
+export {
+  bundleTemplateId,
+  nudgeTemplateId,
+  planTick,
+  policyCheckFor,
+  tickId,
+} from '#lib/engine/plan.ts';
 export {
   participantsFor,
   peersFor,
@@ -61,6 +67,7 @@ export type {
   PlannedEscalate,
   PlannedMoveDueDate,
   PlannedNudge,
+  PlannedNudgeTask,
   PlannedRefreshPacket,
   PlannedTransitionCycle,
   TaskSignal,

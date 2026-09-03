@@ -11,8 +11,10 @@
  *     `tl_review_submission` behind it. A task that is done because something edited a file
  *     is exactly the drift the POC promises to catch.
  *  2. `nudged_task_has_nudges`    — a task with `attempt_n = n` has at least n `tl_nudge`
- *     records, and every delivered one names a message the ledger recorded
- *     (`channel.sendDirect`, `result: ok`, that `message_ref` as `result_ref`).
+ *     records; every delivered one carries a `message_ref`; and each distinct `message_ref`
+ *     has **exactly one** `channel.sendDirect` `ok` line in the ledger. Nudges bundled into
+ *     one DM share a `message_ref` (docs/DECISIONS.md D17), so "one per nudge" would be the
+ *     wrong rule — "one send per message" is the right one.
  *  3. `escalated_task_in_proposal`— an `escalated` task is cited by an `escalate` proposal's
  *     `evidence_refs`. Escalation without evidence is a rumour.
  *  4. `state_records_ledgered`    — every adapter-assigned `tl_*` record id appears as a
@@ -160,15 +162,15 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
   const resultRefs = new Set(
     ledger.map((entry) => entry.result_ref).filter((ref): ref is string => typeof ref === 'string'),
   );
-  const sentRefs = new Set(
-    ledger
-      .filter(
-        (entry) =>
-          entry.port === 'channel' && entry.function === 'sendDirect' && entry.result === 'ok',
-      )
-      .map((entry) => entry.result_ref)
-      .filter((ref): ref is string => typeof ref === 'string'),
-  );
+  /** How many `channel.sendDirect ok` lines name each `message_ref`. Must be exactly one. */
+  const sendsByRef = new Map<string, number>();
+  for (const entry of ledger) {
+    if (entry.port !== 'channel' || entry.function !== 'sendDirect' || entry.result !== 'ok') {
+      continue;
+    }
+    if (typeof entry.result_ref !== 'string') continue;
+    sendsByRef.set(entry.result_ref, (sendsByRef.get(entry.result_ref) ?? 0) + 1);
+  }
 
   const workerCache = new Map<WorkerId, Worker | null>();
   const lookup = async (id: WorkerId): Promise<Worker | null> => {
@@ -242,10 +244,23 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
       }
       for (const nudge of nudges) {
         if (!nudge.delivered) continue;
-        if (nudge.message_ref === undefined || !sentRefs.has(nudge.message_ref)) {
+        if (nudge.message_ref === undefined) {
           rules.nudges.findings.push({
             id: nudge.id,
-            detail: `delivered nudge has no channel.sendDirect ok entry in the ledger (message_ref ${nudge.message_ref ?? 'missing'})`,
+            detail: 'nudge is delivered but carries no message_ref',
+          });
+          continue;
+        }
+        // Several nudges share one `message_ref` when a bundled DM covered several tasks
+        // (docs/DECISIONS.md D17) — but that one message must have been sent exactly once.
+        const sends = sendsByRef.get(nudge.message_ref) ?? 0;
+        if (sends !== 1) {
+          rules.nudges.findings.push({
+            id: nudge.id,
+            detail:
+              sends === 0
+                ? `delivered nudge has no channel.sendDirect ok entry in the ledger (message_ref ${nudge.message_ref})`
+                : `message_ref ${nudge.message_ref} was sent ${sends} times; one DM is one ledger line`,
           });
         }
       }

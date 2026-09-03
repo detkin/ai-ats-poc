@@ -8,7 +8,9 @@
  *   2. **It documents the executor.** `bin/tick.mjs` (block B1.3) performs exactly these
  *      state changes, but through `StatePort`/`ChannelPort` so every call is ledgered and
  *      the adapter assigns the real ids. Ids invented here are deterministic placeholders
- *      derived from the tick id, never a source of truth.
+ *      derived from the tick id, never a source of truth. In particular a `nudge` action is
+ *      **one DM per recipient** (D17): one `message_ref` shared by one `tl_nudge` per
+ *      bundled task, each moving its own task to `nudged` with its own `attempt_n`.
  *
  * Public interface: `applyPlan(snapshot, plan) -> TickSnapshot`.
  *
@@ -57,12 +59,17 @@ export function applyPlan(snapshot: TickSnapshot, plan: TickPlan): TickSnapshot 
   let packetHash = snapshot.last_packet_inputs_hash;
   let seq = 0;
 
-  const apply = (action: PlannedAction): void => {
+  /** One deterministic id per *record* created, so a bundled nudge gets one id per task. */
+  const nextId = (kind: string): string => {
     seq += 1;
+    return placeholderId(kind, plan.tick_id, seq);
+  };
+
+  const apply = (action: PlannedAction): void => {
     switch (action.kind) {
       case 'anomaly': {
         anomalies.push({
-          id: placeholderId('anomaly', plan.tick_id, seq),
+          id: nextId('anomaly'),
           created_at: now,
           updated_at: now,
           created_by: actor,
@@ -85,35 +92,40 @@ export function applyPlan(snapshot: TickSnapshot, plan: TickPlan): TickSnapshot 
         return;
       }
       case 'nudge': {
-        const task = tasks.get(action.task_id);
-        if (task === undefined) return;
-        const nudged = setTaskStatus(task, 'nudged', now);
-        tasks.set(task.id, {
-          ...nudged,
-          status: 'nudged',
-          attempt_n: action.attempt_n,
-          nudged_at: now,
-          updated_at: now,
-        });
-        nudges.push({
-          id: placeholderId('nudge', plan.tick_id, seq),
-          created_at: now,
-          updated_at: now,
-          created_by: actor,
-          task_id: action.task_id,
-          cycle_id: cycle.id,
-          channel: snapshot.policy.channels.nudge,
-          sent_at: now,
-          attempt_n: action.attempt_n,
-          template_id: action.template_id,
-          delivered: true,
-          policy_check: action.policy_check,
-        });
+        // One DM, one `message_ref`, one `tl_nudge` per bundled task (D17).
+        const messageRef = `msg_${plan.tick_id.slice(0, 8)}_${action.to_worker_id}`;
+        for (const entry of action.tasks) {
+          const task = tasks.get(entry.task_id);
+          if (task === undefined) continue;
+          const nudged = setTaskStatus(task, 'nudged', now);
+          tasks.set(task.id, {
+            ...nudged,
+            status: 'nudged',
+            attempt_n: entry.attempt_n,
+            nudged_at: now,
+            updated_at: now,
+          });
+          nudges.push({
+            id: nextId('nudge'),
+            created_at: now,
+            updated_at: now,
+            created_by: actor,
+            task_id: entry.task_id,
+            cycle_id: cycle.id,
+            channel: snapshot.policy.channels.nudge,
+            sent_at: now,
+            attempt_n: entry.attempt_n,
+            template_id: action.template_id,
+            delivered: true,
+            message_ref: messageRef,
+            policy_check: action.policy_check,
+          });
+        }
         return;
       }
       case 'escalate': {
         proposals.push({
-          id: placeholderId('proposed_action', plan.tick_id, seq),
+          id: nextId('proposed_action'),
           created_at: now,
           updated_at: now,
           created_by: actor,

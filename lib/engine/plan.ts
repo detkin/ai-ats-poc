@@ -9,7 +9,8 @@
  * Public interface:
  *   planTick(snapshot: TickSnapshot): TickPlan
  *   policyCheckFor(signal): TlNudgePolicyCheck        // also used by bin/nudge.mjs
- *   nudgeTemplateId(kind, attemptN): string
+ *   nudgeTemplateId(kind | 'multi', attemptN): string
+ *   bundleTemplateId(kinds, attemptN): string
  *   tickId(cycleId, now): string
  *
  * The rules, applied in this order (docs/PLAN.md §4 block B1.1):
@@ -17,7 +18,8 @@
  *   b. a task whose `tl_review_submission` has been submitted → `complete_task`;
  *   c. an absent participant is never nudged; the due date moves once, to
  *      `until + policy.absence.move_due_date_days_after_return` days;
- *   d. overdue, present, audible, gap elapsed, attempts left → `nudge`;
+ *   d. overdue, present, audible, gap elapsed, attempts left → `nudge`, and the tick emits
+ *      **one** `nudge` action per recipient bundling all of their eligible tasks (D17);
  *   e. overdue past `after_attempts` or `overdue_days` → **one** `escalate` for the whole
  *      cycle, bundling every offender with evidence (spec §8: one escalation, not forty);
  *   f. running + an outstanding escalation → `escalated`; escalated + none → `running`;
@@ -37,6 +39,8 @@ import type {
   DetectSummary,
   PlannedAction,
   PlannedEscalate,
+  PlannedNudge,
+  PlannedNudgeTask,
   TaskSignal,
   TickPlan,
   TickSnapshot,
@@ -52,9 +56,20 @@ export function tickId(cycleId: string, now: string): string {
 /**
  * Template a nudge is rendered from (docs/DECISIONS.md D7: templates with injected facts,
  * no LLM on the tick path). Block B1.4 ships the matching files under `templates/nudges/`.
+ * `multi` is the bundle template used when one DM covers more than one kind of task.
  */
-export function nudgeTemplateId(kind: TlTaskKind, attemptN: number): string {
+export function nudgeTemplateId(kind: TlTaskKind | 'multi', attemptN: number): string {
   return `nudge.${kind}.${attemptN <= 1 ? 'first' : 'followup'}`;
+}
+
+/**
+ * The template one bundled DM uses: the shared task kind when every bundled task has the
+ * same one, `nudge.multi.*` otherwise. `attemptN` is the bundle's highest attempt.
+ */
+export function bundleTemplateId(kinds: readonly TlTaskKind[], attemptN: number): string {
+  const unique = [...new Set(kinds)];
+  const only = unique.length === 1 ? unique[0] : undefined;
+  return nudgeTemplateId(only ?? 'multi', attemptN);
 }
 
 /**
@@ -91,6 +106,47 @@ function nudgeRefsByTask(nudges: TlNudge[]): Map<string, string[]> {
     else list.push(nudge.id);
   }
   return byTask;
+}
+
+/**
+ * One recipient's reminder for this tick: every task of theirs that cleared the policy gate,
+ * as a single `nudge` action (docs/DECISIONS.md D17). The DM's `attempt_n` is the highest in
+ * the bundle — that is what picks `first` vs `followup` — while each task keeps its own
+ * attempt number, because a bundle can mix a first reminder with a follow-up.
+ *
+ * Evidence is the bundled task ids followed by every nudge already on record for them.
+ */
+function bundledNudge(
+  workerId: WorkerId,
+  signals: readonly TaskSignal[],
+  nudgeRefs: Map<string, string[]>,
+): PlannedNudge {
+  const tasks: PlannedNudgeTask[] = signals.map((signal) => ({
+    task_id: signal.task_id,
+    kind: signal.kind,
+    attempt_n: signal.attempt_n + 1,
+  }));
+  const attemptN = tasks.reduce((max, task) => Math.max(max, task.attempt_n), 1);
+  const taskIds = tasks.map((task) => task.task_id);
+  const evidence = [...taskIds];
+  for (const id of taskIds) evidence.push(...(nudgeRefs.get(id) ?? []));
+  const first = signals[0];
+  if (first === undefined) throw new Error('bundledNudge called with no signals');
+
+  return {
+    kind: 'nudge',
+    to_worker_id: workerId,
+    task_ids: taskIds,
+    tasks,
+    template_id: bundleTemplateId(
+      tasks.map((task) => task.kind),
+      attemptN,
+    ),
+    attempt_n: attemptN,
+    // Every signal in the bundle passed the same gate, so record the first one's check.
+    policy_check: policyCheckFor(first),
+    evidence_refs: evidence,
+  };
 }
 
 /**
@@ -202,6 +258,8 @@ export function planTick(snapshot: TickSnapshot): TickPlan {
   }
 
   const completedTaskIds = new Set<string>();
+  /** Recipient → the signals of theirs that cleared the gate, in task-id order. */
+  const bundles = new Map<WorkerId, TaskSignal[]>();
 
   for (const signal of detected.signals) {
     // (b) The shadow record appeared — the task is done, whatever else is true of it.
@@ -237,19 +295,20 @@ export function planTick(snapshot: TickSnapshot): TickPlan {
       continue;
     }
 
-    // (d) Nudge, only when every policy gate passes.
+    // (d) Nudge, only when every policy gate passes. The action itself is emitted once per
+    //     recipient, below: one person hears from the engine once per tick (D17).
     const check = policyCheckFor(signal);
     if (check.passed && signal.overdue && signal.status !== 'escalated') {
-      actions.push({
-        kind: 'nudge',
-        task_id: signal.task_id,
-        to_worker_id: signal.participant_worker_id,
-        template_id: nudgeTemplateId(signal.kind, signal.attempt_n + 1),
-        attempt_n: signal.attempt_n + 1,
-        policy_check: check,
-        evidence_refs: [signal.task_id, ...(nudgeRefs.get(signal.task_id) ?? [])],
-      });
+      const bundle = bundles.get(signal.participant_worker_id);
+      if (bundle === undefined) bundles.set(signal.participant_worker_id, [signal]);
+      else bundle.push(signal);
     }
+  }
+
+  // (d, continued) One `nudge` action per recipient, bundling every task that cleared the
+  // gate. Insertion order is the signals' task-id order, so the plan stays deterministic.
+  for (const [workerId, signals] of bundles) {
+    actions.push(bundledNudge(workerId, signals, nudgeRefs));
   }
 
   // (e) One escalation per cycle per tick, bundling every offender.

@@ -5,6 +5,10 @@
  * environment, 2 on a bad argument), the `--json` report shape the M0 tester and
  * `--json` consumers depend on, and the human rendering. The CLI is spawned as a
  * real process with an explicit environment so nothing leaks in from the runner.
+ *
+ * Since block B1.5 the CLI is `runCli(DOCTOR_SPEC, …)` like the other nine, so `--help`
+ * is the shared generated help (`Usage:` on its own line above `node bin/doctor.mjs`)
+ * rather than a hand-written USAGE string. Every exit code is unchanged.
  */
 
 import { createHash } from 'node:crypto';
@@ -195,7 +199,8 @@ describe('bin/doctor.mjs argument and environment errors', () => {
   it('exits 0 and prints usage for --help', () => {
     const result = runDoctorCli(['--help'], healthyEnv());
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('Usage: node bin/doctor.mjs');
+    expect(result.stdout).toContain('node bin/doctor.mjs');
+    expect(result.stdout).toContain('Exit codes:');
   });
 
   it('exits 1 with a named variable when the environment is invalid', () => {

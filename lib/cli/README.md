@@ -1,4 +1,4 @@
-# `lib/cli` — the nine scripts, and what each one is allowed to do
+# `lib/cli` — the ten scripts, and what each one is allowed to do
 
 `bin/*.mjs` are three lines each: parse arguments, call one function here, render the result
 (docs/DECISIONS.md D11). Everything real — the flags, the exit codes, the order of port calls
@@ -6,9 +6,9 @@
 
 Shared plumbing: `args.ts` (the parser and `--help` renderer, driven by a declarative
 `CliSpec`), `output.ts` (`{ code, data, lines }`; `--json` prints `data` and nothing else),
-`runtime.ts` (`openRuntime` + `runCli`, the one place exit codes are decided), `snapshot.ts`
-(the only place a `TickSnapshot` is read from live ports), `execute.ts` (a plan → ledgered
-port calls), `templates.ts` (nudge text from `templates/nudges/*.md`).
+`runtime.ts` (`openRuntime` / `openRuntimeForRecord` + `runCli`, the one place exit codes are
+decided), `snapshot.ts` (the only place a `TickSnapshot` is read from live ports), `execute.ts`
+(a plan → ledgered port calls), `templates.ts` (nudge text from `templates/nudges/*.md`).
 
 **Exit codes, everywhere:**
 
@@ -46,9 +46,10 @@ per-cycle lock: build the snapshot through the ports, `planTick` (pure), execute
 record the tick. `--scan` adds an untrusted document (a résumé, a review body) to the texts
 this tick screens; an instruction aimed at the agent becomes a `tl_anomaly` and nothing else.
 `--dry-run` plans and reports without writing and without recording the tick. Output:
-`{ tick_id, changed, detected: {…}, actions: [{ kind, task_id?, … }], escalations, closed }`.
-A second tick with nothing new reports `changed: false` and appends only _read_ lines to the
-ledger.
+`{ tick_id, changed, detected: {…}, actions: [{ kind, task_id?, … }], nudges, nudged_tasks,
+escalations, closed }`, where `nudges` counts **recipients** (one `nudge` action, one DM each)
+and `nudged_tasks` counts the tasks those DMs covered. A second tick with nothing new reports
+`changed: false` and appends only _read_ lines to the ledger.
 
 **`propose.mjs`** `--cycle <id> --kind <k> --payload <json> --rationale <text> --evidence
 <id,id> [--by <w_id>]` — the only writer of a `tl_proposed_action`. The tick's escalations go
@@ -66,7 +67,14 @@ business of deciding (spec §9).
 with the new `attempt_n`. On a failure: record a `tl_nudge` with `delivered: false`, `sent_at:
 null` and the failing `policy_check`, leave the task untouched, exit 1. `--force-policy-check`
 _runs and prints_ the check without sending or recording anything — **there is no flag that
-bypasses the gate**, by design (spec §4).
+bypasses the gate**, by design (spec §4). `deliverNudge` here is the shared send-and-record
+sequence: it takes a _bundle_ of one person's tasks, sends one DM, and writes one `tl_nudge`
+per task carrying that DM's `message_ref` (docs/DECISIONS.md D17). `--task` is a bundle of one.
+
+**`doctor.mjs`** `[--json]` — the cold-start report from `lib/doctor/*`, rendered. Exit 0 when
+every check is `ok` or `warn`; **1** when any check fails _or_ the `TL_*` environment is
+invalid (doctor is the tool you run because the environment might be wrong, so "not ready" is
+its domain answer, not a usage error); 2 on a bad argument.
 
 **`packet.mjs`** `assemble --cycle <id> --kind calibration [--staging <dir>]` |
 `show --packet <id>` — the engine assembles the body (`assembleCalibration`, no LLM, every
@@ -84,6 +92,13 @@ nothing.
 Tier 1; exit 1 with the offending ids named. See the header of `verify.ts` for the list. Records
 whose ids are not adapter-assigned (`tl_<kind>_<8 hex>`) are exempt from the "must have a ledger
 line" rule: the seeded `tl_cycle_h2_2026` was written by the fixture generator, not by an agent.
+
+**A CLI addressed by record resolves its cycle first.** `decide --proposal`, `nudge --task` and
+`packet show --packet` name a record, not a cycle, so `openRuntimeForRecord(kind, id)` looks the
+record up through the _unledgered_ ports and then opens the ledgered runtime scoped to that
+record's `cycle_id` (docs/DECISIONS.md D19). Without it those writes carried `cycle_id: null`
+and `audit.mjs --cycle` could not show the decision of record — the one line spec §9's "logged
+with who and when" is really about.
 
 ## Three things worth knowing before changing anything here
 

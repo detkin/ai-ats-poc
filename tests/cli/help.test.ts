@@ -14,6 +14,7 @@ import type { CliOutput } from '#lib/cli/output.ts';
 import { AUDIT_SPEC, runAudit } from '#lib/cli/audit.ts';
 import { CYCLE_SPEC, runCycle } from '#lib/cli/cycle.ts';
 import { DECIDE_SPEC, runDecide } from '#lib/cli/decide.ts';
+import { DOCTOR_SPEC, runDoctor } from '#lib/cli/doctor.ts';
 import { NUDGE_SPEC, runNudge } from '#lib/cli/nudge.ts';
 import { PACKET_SPEC, runPacket } from '#lib/cli/packet.ts';
 import { PROPOSE_SPEC, runPropose } from '#lib/cli/propose.ts';
@@ -32,6 +33,7 @@ const CLIS: [CliSpec, (args: Args) => Promise<CliOutput>][] = [
   [AUDIT_SPEC, runAudit],
   [VERIFY_SPEC, runVerify],
   [SEED_SPEC, runSeed],
+  [DOCTOR_SPEC, runDoctor],
 ];
 
 for (const [spec, handler] of CLIS) {

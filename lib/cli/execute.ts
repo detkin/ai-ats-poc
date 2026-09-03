@@ -13,7 +13,9 @@
  *   move_due_date    state.update('task', { due_at })                 — an engine write, not
  *                                                                       a proposal: no human
  *                                                                       judgement is involved
- *   nudge            channel.sendDirect + state.create('nudge') + state.update('task')
+ *   nudge            one channel.sendDirect for the recipient, then one
+ *                    state.create('nudge') + state.update('task') per bundled task, every
+ *                    nudge carrying the DM's message_ref (docs/DECISIONS.md D17)
  *   escalate         propose.mjs's own createProposal, then each task → 'escalated', then one
  *                    DM to the recipient so a human learns a decision is waiting
  *   transition_cycle state.update('cycle', { status })
@@ -28,6 +30,7 @@
 import { toInstant } from '#lib/adapters/index.ts';
 import type { Runtime } from '#lib/adapters/index.ts';
 import { deliverNudge } from '#lib/cli/nudge.ts';
+import type { NudgeTargetTask } from '#lib/cli/nudge.ts';
 import { assemblePacket } from '#lib/cli/packet.ts';
 import { createProposal } from '#lib/cli/propose.ts';
 import { escalationFacts, ESCALATION_TEMPLATE_ID, renderTemplate } from '#lib/cli/templates.ts';
@@ -47,6 +50,8 @@ export interface ExecutedAction {
   from?: string;
   to?: string;
   record_id?: string;
+  /** A bundled nudge writes one `tl_nudge` per task; those ids land here. */
+  record_ids?: string[];
   message_ref?: string;
   detail?: string;
 }
@@ -124,25 +129,36 @@ export async function executePlan(
       }
 
       case 'nudge': {
-        const task = tasks.get(action.task_id);
-        if (task === undefined) break;
+        // One recipient, one DM, one `tl_nudge` per bundled task (docs/DECISIONS.md D17).
+        const bundle: NudgeTargetTask[] = [];
+        for (const entry of action.tasks) {
+          const task = tasks.get(entry.task_id);
+          if (task === undefined) continue;
+          bundle.push({
+            task,
+            attemptN: entry.attempt_n,
+            subject: task.external_ref === null ? undefined : workers.get(task.external_ref),
+          });
+        }
+        if (bundle.length === 0) break;
+
         const delivered = await deliverNudge(rt, config, {
           cycle,
-          task,
-          recipient: workers.get(task.participant_worker_id),
-          subject: task.external_ref === null ? undefined : workers.get(task.external_ref),
+          toWorkerId: action.to_worker_id,
+          recipient: workers.get(action.to_worker_id),
+          tasks: bundle,
           templateId: action.template_id,
           attemptN: action.attempt_n,
           policyCheck: action.policy_check,
         });
-        tasks.set(delivered.task.id, delivered.task);
+        for (const task of delivered.tasks) tasks.set(task.id, task);
         done.push({
           kind: action.kind,
-          task_id: action.task_id,
+          task_ids: bundle.map((entry) => entry.task.id),
           to_worker_id: action.to_worker_id,
           template_id: action.template_id,
           attempt_n: action.attempt_n,
-          record_id: delivered.nudge.id,
+          record_ids: delivered.nudges.map((nudge) => nudge.id),
           message_ref: delivered.message_ref,
         });
         break;

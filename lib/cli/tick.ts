@@ -72,6 +72,10 @@ export interface TickResult {
   changed: boolean;
   detected: DetectSummary['counts'] & { cycle_status: string; anomalies: number };
   actions: ExecutedAction[];
+  /** Reminders sent — one per **recipient**, which is one `nudge` action (D17). */
+  nudges: number;
+  /** Tasks those reminders covered; one `tl_nudge` each. */
+  nudged_tasks: number;
   escalations: number;
   closed: boolean;
 }
@@ -110,7 +114,9 @@ export async function tickCycle(options: {
     for (const signal of plan.detected.signals) taskStates[signal.task_id] = signal.status;
     for (const action of plan.actions) {
       if (action.kind === 'complete_task') taskStates[action.task_id] = 'done';
-      if (action.kind === 'nudge') taskStates[action.task_id] = 'nudged';
+      if (action.kind === 'nudge') {
+        for (const entry of action.tasks) taskStates[entry.task_id] = 'nudged';
+      }
       if (action.kind === 'escalate') {
         for (const id of action.task_ids) taskStates[id] = 'escalated';
       }
@@ -130,6 +136,11 @@ export async function tickCycle(options: {
       anomalies: plan.detected.anomalies.length,
     },
     actions,
+    nudges: plan.actions.filter((action) => action.kind === 'nudge').length,
+    nudged_tasks: plan.actions.reduce(
+      (sum, action) => (action.kind === 'nudge' ? sum + action.tasks.length : sum),
+      0,
+    ),
     escalations: plan.actions.filter((action) => action.kind === 'escalate').length,
     closed: plan.actions.some((action) => action.kind === 'close_cycle'),
   };
@@ -153,6 +164,12 @@ function summarize(result: TickResult): string[] {
   } else {
     lines.push('  actions:');
     for (const [kind, count] of [...byKind].sort()) lines.push(`    ${kind.padEnd(16)} ${count}`);
+  }
+  if (result.nudges > 0) {
+    lines.push(
+      `  nudges    ${result.nudges} recipient(s), ${result.nudged_tasks} task(s) — ` +
+        'one reminder per person, not per task',
+    );
   }
   if (result.escalations > 0) {
     const escalation = result.actions.find((action) => action.kind === 'escalate');

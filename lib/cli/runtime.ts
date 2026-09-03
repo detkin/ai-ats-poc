@@ -6,6 +6,9 @@
  *     `now` already rendered as an `InstantISO` and, when the caller names a cycle, a
  *     `cycleIdOf` that stamps that cycle on **every** ledger line of the run (so
  *     `audit.mjs --cycle <id>` sees the reads a tick made, not only the writes).
+ *   `openRuntimeForRecord(kind, id)` — the same, for a CLI addressed by record rather than
+ *     by cycle: it resolves the record's `cycle_id` through the *unledgered* ports first,
+ *     then opens the scoped runtime (docs/DECISIONS.md D19).
  *   `runCli(spec, argv, handler)` — parse, `--help`, run, render, and map every error the
  *     lower layers throw onto the project's exit-code contract:
  *
@@ -19,8 +22,8 @@
  * (`node bin/seed.mjs --reset`, the offending variable, the policy path); the CLI prints the
  * message unchanged rather than inventing a second wording for the same problem.
  *
- * Public interface: `openRuntime`, `OpenedRuntime`, `OpenRuntimeOptions`, `runCli`,
- * `CliError`, `EXIT`.
+ * Public interface: `openRuntime`, `openRuntimeForRecord`, `OpenedRuntime`,
+ * `OpenRuntimeOptions`, `runCli`, `CliError`, `EXIT`.
  *
  * Spec: docs/SPEC.md §5, §9; docs/PLAN.md §2.9, §4 block B1.3.
  */
@@ -40,6 +43,7 @@ import { ConfigError, loadConfig, now as clockNow } from '#lib/config.ts';
 import type { Config } from '#lib/config.ts';
 import { PolicyError } from '#lib/policy/index.ts';
 import { TalentLoopsError } from '#lib/safety/errors.ts';
+import type { StateKind, StateRecordMap } from '#lib/types/engine.ts';
 import type { InstantISO } from '#lib/types/tier1.ts';
 
 /** The exit-code contract, named. */
@@ -86,6 +90,36 @@ export function openRuntime(options: OpenRuntimeOptions = {}): OpenedRuntime {
       : { cycleIdOf: (fn: string, args: unknown[]) => defaultCycleIdOf(fn, args) ?? cycleId }),
   });
   return { rt, config, now };
+}
+
+/** A `tl_*` record that belongs to a cycle. Every kind a record-addressed CLI opens does. */
+interface CycleScoped {
+  cycle_id?: string;
+}
+
+/**
+ * Open a ledgered runtime already scoped to the cycle a record belongs to
+ * (docs/DECISIONS.md D19).
+ *
+ * `decide.mjs --proposal`, `nudge.mjs --task` and `packet.mjs show --packet` are addressed by
+ * *record*, not by cycle, so without this their ledger lines carried `cycle_id: null` and
+ * `audit.mjs --cycle` could not show the decision of record. The lookup itself goes through
+ * `rt.raw`, which appends nothing; only the writes that follow are ledgered, and they carry
+ * the cycle.
+ *
+ * A record the state adapter does not have comes back as `null` with the unscoped runtime,
+ * so the caller can raise its own "no X with id …" domain error.
+ */
+export async function openRuntimeForRecord<K extends StateKind>(
+  kind: K,
+  id: string,
+  options: OpenRuntimeOptions = {},
+): Promise<{ opened: OpenedRuntime; record: StateRecordMap[K] | null }> {
+  const probe = openRuntime(options);
+  const record = await probe.rt.raw.state.get(kind, id);
+  const cycleId = (record as CycleScoped | null)?.cycle_id;
+  if (record === null || cycleId === undefined) return { opened: probe, record };
+  return { opened: openRuntime({ ...options, cycleId }), record };
 }
 
 /** Errors that mean "the environment is wrong", not "the domain said no". */

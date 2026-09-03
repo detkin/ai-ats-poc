@@ -26,7 +26,7 @@ import { UsageError } from '#lib/cli/args.ts';
 import type { Args, CliSpec } from '#lib/cli/args.ts';
 import { ok } from '#lib/cli/output.ts';
 import type { CliOutput } from '#lib/cli/output.ts';
-import { CliError, openRuntime } from '#lib/cli/runtime.ts';
+import { CliError, openRuntimeForRecord } from '#lib/cli/runtime.ts';
 import { toInstant } from '#lib/adapters/index.ts';
 import type { TlProposalState, TlProposedAction } from '#lib/types/engine.ts';
 import type { WorkerId } from '#lib/types/tier1.ts';
@@ -116,7 +116,17 @@ export async function runDecide(args: Args): Promise<CliOutput> {
   const decision = parseDecision(args.require('decision'));
   const note = args.get('note');
 
-  const { rt } = openRuntime();
+  // The proposal's cycle is resolved before the ledgered runtime opens, so the `state.update`
+  // that records this decision carries `cycle_id` (docs/DECISIONS.md D19). Without it the
+  // single most important line in the ledger was invisible to `audit.mjs --cycle`.
+  const { opened, record } = await openRuntimeForRecord('proposed_action', proposalId);
+  if (record === null) {
+    throw new CliError(
+      'PROPOSAL_NOT_FOUND',
+      `no proposal with id "${proposalId}". List them with: node bin/cycle.mjs show --cycle <id>`,
+    );
+  }
+  const rt = opened.rt;
   const decided = await decideProposal(rt, {
     proposalId,
     by,

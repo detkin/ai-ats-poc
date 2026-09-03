@@ -8,8 +8,9 @@
  *   is present and audible, a moved due date and *no* reminder for everybody who is away,
  *   one escalation with evidence instead of a hundred more reminders, an anomaly for a
  *   résumé that tried to give orders → a second tick that changes nothing and appends only
- *   reads → the ledger showing every write → `verify-loops` passing, and then failing when
- *   the state file is hand-edited behind the engine's back.
+ *   reads → the ledger showing every write, including a `decide.mjs` and a standalone
+ *   `nudge.mjs` addressed by record id (docs/DECISIONS.md D19) → `verify-loops` passing, and
+ *   then failing when the state file is hand-edited behind the engine's back.
  *
  * The tests share state deliberately: this is one scenario, and vitest runs `it` blocks in
  * a file in order. `TL_NOW` is set explicitly for every step (docs/DECISIONS.md D8).
@@ -22,6 +23,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AUDIT_SPEC, runAudit } from '#lib/cli/audit.ts';
 import type { AuditReport } from '#lib/cli/audit.ts';
 import { CYCLE_SPEC, runCycle } from '#lib/cli/cycle.ts';
+import { DECIDE_SPEC, runDecide } from '#lib/cli/decide.ts';
+import { NUDGE_SPEC, runNudge } from '#lib/cli/nudge.ts';
 import { TICK_SPEC, runTick } from '#lib/cli/tick.ts';
 import type { TickResult } from '#lib/cli/tick.ts';
 import { VERIFY_SPEC, runVerify } from '#lib/cli/verify.ts';
@@ -123,10 +126,41 @@ describe('the first tick', () => {
 
     const byKind = new Map<string, number>();
     for (const action of data.actions) byKind.set(action.kind, (byKind.get(action.kind) ?? 0) + 1);
-    expect(byKind.get('nudge') ?? 0).toBeGreaterThan(100);
+    // One `nudge` action per recipient, covering strictly more tasks than there are people
+    // (docs/DECISIONS.md D17).
+    expect(byKind.get('nudge') ?? 0).toBe(data.nudges);
+    expect(data.nudges).toBeGreaterThan(50);
+    expect(data.nudged_tasks).toBeGreaterThan(data.nudges);
     expect(byKind.get('move_due_date') ?? 0).toBeGreaterThan(0);
     expect(byKind.get('anomaly')).toBe(1);
     expect(byKind.get('refresh_packet')).toBe(1);
+  });
+
+  it('sends exactly one DM per recipient, and one tl_nudge per bundled task', () => {
+    const outbox = readOutbox(dataDir);
+    const nudgeLines = outbox.filter((line) => line.template_id.startsWith('nudge.'));
+    const recipients = nudgeLines.map((line) => line.to_worker_id);
+
+    // No person appears twice in the outbox: that is the whole point of D17.
+    expect(new Set(recipients).size).toBe(nudgeLines.length);
+    expect(nudgeLines).toHaveLength(firstTick.nudges);
+
+    const nudges = (readState<'nudge'>(dataDir, 'nudges.json') as TlNudge[]).filter(
+      (nudge) => nudge.cycle_id === CYCLE && nudge.delivered,
+    );
+    expect(nudges).toHaveLength(firstTick.nudged_tasks);
+
+    // Every tl_nudge names a message that is actually in the outbox, addressed to its owner.
+    const byRef = new Map(nudgeLines.map((line) => [line.message_ref, line]));
+    const tasksById = new Map(tasks().map((task) => [task.id, task]));
+    for (const nudge of nudges) {
+      expect(nudge.message_ref).toBeDefined();
+      const line = byRef.get(nudge.message_ref ?? '');
+      expect(line, `no outbox line for ${nudge.id}`).toBeDefined();
+      expect(line?.to_worker_id).toBe(tasksById.get(nudge.task_id)?.participant_worker_id);
+    }
+    // …and the bundles partition the nudged tasks: refs are shared, never duplicated per task.
+    expect(new Set(nudges.map((nudge) => nudge.message_ref)).size).toBe(nudgeLines.length);
   });
 
   it("moves w_0009's self review to two days after the return day, and sends no nudge", () => {
@@ -145,14 +179,12 @@ describe('the first tick', () => {
     expect(readOutbox(dataDir).some((line) => line.to_worker_id === 'w_0033')).toBe(false);
   });
 
-  it('writes one outbox line per nudge, plus one for the escalation', () => {
-    const nudges = readState<'nudge'>(dataDir, 'nudges.json') as TlNudge[];
-    const delivered = nudges.filter((nudge) => nudge.delivered);
+  it('writes one outbox line per recipient, plus one for the escalation', () => {
     const outbox = readOutbox(dataDir);
     const nudgeLines = outbox.filter((line) => line.template_id.startsWith('nudge.'));
     const escalationLines = outbox.filter((line) => line.template_id === 'escalation');
 
-    expect(nudgeLines).toHaveLength(delivered.length);
+    expect(nudgeLines).toHaveLength(firstTick.nudges);
     expect(escalationLines).toHaveLength(1);
     expect(escalationLines[0]?.to_worker_id).toBe('w_0021');
     // The rendered text carries injected facts, never an unresolved placeholder.
@@ -160,21 +192,23 @@ describe('the first tick', () => {
     expect(escalationLines[0]?.text).toContain('node bin/decide.mjs --proposal');
   });
 
-  it('ledgers a channel.sendDirect and a state.create nudge per nudge, stamped with the tick', () => {
+  it('ledgers one sendDirect per recipient and a state.create per bundled nudge', () => {
     const ledger = readLedger(dataDir).filter((entry) => entry.tick_id === firstTick.tick_id);
     const nudges = (readState<'nudge'>(dataDir, 'nudges.json') as TlNudge[]).filter(
       (nudge) => nudge.delivered,
     );
-    const sent = new Set(
-      ledger
-        .filter((e) => e.port === 'channel' && e.function === 'sendDirect' && e.result === 'ok')
-        .map((e) => e.result_ref),
+    const sends = ledger.filter(
+      (e) => e.port === 'channel' && e.function === 'sendDirect' && e.result === 'ok',
     );
+    const sent = new Set(sends.map((e) => e.result_ref));
     const created = new Set(
       ledger.filter((e) => e.port === 'state' && e.function === 'create').map((e) => e.result_ref),
     );
 
-    expect(nudges.length).toBeGreaterThan(100);
+    expect(nudges.length).toBe(firstTick.nudged_tasks);
+    // One send per recipient plus the single escalation DM — not one per task.
+    expect(sends).toHaveLength(firstTick.nudges + 1);
+    expect(sent.size).toBe(sends.length);
     for (const nudge of nudges) {
       expect(sent.has(nudge.message_ref)).toBe(true);
       expect(created.has(nudge.id)).toBe(true);
@@ -294,6 +328,73 @@ describe('audit', () => {
     expect(run.stdout).toContain('| ts');
     expect(run.stdout).toContain('port.function');
     expect(run.stdout).toContain('## Summary');
+  });
+
+  it("carries the HRBP's decision of record, addressed by proposal id (D19)", async () => {
+    const proposal = (
+      readState<'proposed_action'>(dataDir, 'proposed_actions.json') as TlProposedAction[]
+    ).find((row) => row.cycle_id === CYCLE && row.kind === 'escalate');
+    expect(proposal).toBeDefined();
+
+    setNow('2026-09-03T16:00:00Z');
+    const decided = await runJson<TlProposedAction>(DECIDE_SPEC, runDecide, [
+      '--proposal',
+      proposal?.id ?? '',
+      '--by',
+      'w_0021',
+      '--decision',
+      'approve',
+      '--note',
+      'seen',
+    ]);
+    expect(decided.run.code).toBe(0);
+    expect(decided.data.status).toBe('approved');
+
+    const run = await runCli(AUDIT_SPEC, runAudit, ['--cycle', CYCLE, '--format', 'json']);
+    const report = JSON.parse(run.stdout) as AuditReport;
+    const update = report.entries.find(
+      (entry) =>
+        entry.port === 'state' &&
+        entry.function === 'update' &&
+        entry.result_ref === proposal?.id &&
+        entry.ts === '2026-09-03T16:00:00Z',
+    );
+    expect(update, 'the decision of record is missing from audit --cycle').toBeDefined();
+  });
+
+  it('carries a standalone nudge.mjs run, addressed by task id (D19)', async () => {
+    // 2026-09-07T06:00Z is 11:30 on a Monday in Bangalore, and w_0009's moved due date
+    // (2026-09-06) has just passed — the one instant at which the PTO'd manager is finally
+    // nudgeable (docs/DECISIONS.md D18). 16:00Z never would be: that is 21:30 IST.
+    setNow('2026-09-07T06:00:00Z');
+    const task = selfTaskOf('w_0009');
+    expect(task?.status).toBe('pending');
+
+    const nudged = await runJson<TlNudge & { sent: boolean }>(NUDGE_SPEC, runNudge, [
+      '--task',
+      task?.id ?? '',
+    ]);
+    expect(nudged.run.code).toBe(0);
+    expect(nudged.data.sent).toBe(true);
+
+    const run = await runCli(AUDIT_SPEC, runAudit, ['--cycle', CYCLE, '--format', 'json']);
+    const report = JSON.parse(run.stdout) as AuditReport;
+    expect(
+      report.entries.some(
+        (entry) =>
+          entry.port === 'channel' &&
+          entry.function === 'sendDirect' &&
+          entry.result_ref === nudged.data.message_ref,
+      ),
+      'the standalone sendDirect is missing from audit --cycle',
+    ).toBe(true);
+    expect(
+      report.entries.some(
+        (entry) =>
+          entry.port === 'state' && entry.function === 'update' && entry.result_ref === task?.id,
+      ),
+      'the task transition is missing from audit --cycle',
+    ).toBe(true);
   });
 
   it('rejects an unknown --format', async () => {
