@@ -298,3 +298,14 @@ Spec §8 loop-2 demo end to end on fixtures; additionally diff `lib/engine/plan.
 ---
 
 ## 6. After M2 — checkpoint with the user (M3 req/offer approval, M4 rediscovery + evals + audit, M5 demo script)
+
+## 7. M2.5 — Live Rippling smoke (after the user connects the Rippling MCP)
+
+User direction (2026-09-02): fixtures are right for M0–M2, but the real tenant will surface bugs. Before M3:
+
+1. `TL_ADAPTER=rippling node bin/doctor.mjs` must reach `ok` on `mcp_servers` with the real URL and access assignment.
+2. Read-only pass, ledgered: `lookup_me`, `search_people`, `lookup_direct_reports`, `lookup_absence`, `search_leave_types`, `search_work_locations`, `list_custom_objects`. Record every field-name mismatch against `lib/types/tier1.ts` in `docs/testing/live-rippling.md`.
+3. Custom-object pass: `setup_custom_object` for `tl_cycle`/`tl_task`/`tl_nudge`/`tl_proposed_action`/`tl_agent_action`; create/update/list a record of each; confirm the allowlist rejects anything else; confirm the ledger lands as `tl_agent_action` records.
+4. Availability: `lookup_absence` for a real worker vs the fixture assumption (`until` inclusive, `source` values).
+5. Retire or confirm each fixture-only assumption: Q2, Q6, spec §12; REST availability for reqs/candidates/applications.
+6. Report pass/fail per call with the raw MCP response shapes (redacted) so the adapter can be corrected in one block.
