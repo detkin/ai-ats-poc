@@ -161,7 +161,7 @@ describe('packet assemble', () => {
     rmSync(join(staging, 'bad-citation.json'));
   });
 
-  it('reports the debrief packet as an M2 feature', async () => {
+  it('refuses a debrief on a review cycle: the packet kind follows the cycle type', async () => {
     setNow(ANCHOR);
     const run = await runCli(PACKET_SPEC, runPacket, [
       'assemble',
@@ -171,7 +171,8 @@ describe('packet assemble', () => {
       'debrief',
     ]);
     expect(run.code).toBe(1);
-    expect(run.stderr).toContain('M2');
+    expect(run.stderr).toContain('is a review cycle');
+    expect(run.stderr).toContain('assembles calibration');
   });
 
   it('rejects a kind it has never heard of, as usage', async () => {

@@ -84,6 +84,11 @@ To re-send one specific nudge outside a tick — rare; prefer the tick:
 node bin/nudge.mjs --task tl_task_00000001 --template nudge.write_self_review.followup --json
 ```
 
+`--task` names the task, not the message: the DM covers every task that person owes in this
+cycle and clears the same gate, because one DM per person also means one cadence window per
+person — `--only-this-task` narrows it, and still silences the rest of their work for
+`nudge_min_gap_hours`.
+
 `--force-policy-check` re-runs and records the policy check without sending. There is no flag
 that sends past a failed check, and you must not look for one.
 

@@ -7,7 +7,8 @@
  *
  * Rows (docs/PLAN.md §4 block B1.4):
  *   a. SKILL.md exists, declares `name: talent-loops`, and stays under 60 lines.
- *   b. every `bin/<x>.mjs` named anywhere in the operator layer exists on disk.
+ *   b. every `bin/<x>.mjs` named anywhere in the operator layer exists on disk, and both
+ *      shipped loops have a mode file the router can resolve.
  *   c. every `--flag` on a `node bin/<x>.mjs …` command line appears in that CLI's `--help`.
  *   d. every backticked `key.path: value` in `_tenant.md` matches `loadPolicy()`, and every
  *      leaf key of the policy is mentioned at least once.
@@ -140,6 +141,58 @@ describe('b. every CLI the operator layer names exists', () => {
     expect(referenced).toContain('tick');
     expect(referenced).toContain('propose');
     expect(referenced).toContain('decide');
+  });
+
+  /** A loop the router calls `available` must have a mode file, or the run stops at step 1. */
+  it('ships a mode file for every loop the router marks available', () => {
+    const skill = readFileSync(SKILL_PATH, 'utf8');
+    const rows = [
+      ...skill.matchAll(/\|\s*`([a-z-]+)`\s*\|\s*`(modes\/[a-z-]+\.md)`\s*\|\s*(\w+)/g),
+    ];
+    expect(rows.length, 'the router lists no loops').toBeGreaterThan(0);
+    const available = rows.filter((row) => row[3] === 'available');
+    expect(available.map((row) => row[1])).toEqual(['review-cycle', 'interview-loop']);
+    for (const row of available) {
+      expect(
+        existsSync(path.join(REPO_ROOT, row[2] ?? '')),
+        `${row[2]} is marked available in SKILL.md but does not exist`,
+      ).toBe(true);
+    }
+  });
+
+  /** Loop 2 is the "one engine, two loops" claim: it may not grow a script of its own. */
+  it('interview-loop.md calls only the shared bin/ scripts', () => {
+    const mode = DOCS.find((doc) => doc.name.endsWith('interview-loop.md'));
+    expect(mode, 'modes/interview-loop.md is missing').toBeDefined();
+    const scripts = [...new Set(binScriptsIn(mode?.text ?? ''))].sort();
+    expect(scripts).toContain('tick');
+    expect(scripts).toContain('decide');
+    const shared = new Set([
+      'audit',
+      'cycle',
+      'decide',
+      'doctor',
+      'nudge',
+      'packet',
+      'propose',
+      'seed',
+      'tick',
+      'verify-loops',
+    ]);
+    const strangers = scripts.filter((script) => !shared.has(script));
+    expect(
+      strangers,
+      `interview-loop.md names a script of its own: ${strangers.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  /** The one thing loop 2 exists to make impossible must be said in the mode file. */
+  it('interview-loop.md says advance/reject is only ever a proposal', () => {
+    const text = DOCS.find((doc) => doc.name.endsWith('interview-loop.md'))?.text ?? '';
+    expect(text).toContain('propose');
+    expect(text).toContain('advance_stage');
+    expect(text).toContain('decide.mjs');
+    expect(text.toLowerCase()).toContain('never writes a stage');
   });
 
   for (const script of referenced) {

@@ -15,7 +15,7 @@ The argument names the loop.
 | Argument         | Mode file                 | Status    |
 | ---------------- | ------------------------- | --------- |
 | `review-cycle`   | `modes/review-cycle.md`   | available |
-| `interview-loop` | `modes/interview-loop.md` | M2        |
+| `interview-loop` | `modes/interview-loop.md` | available |
 | `req-approval`   | `modes/req-approval.md`   | M3        |
 | `rediscovery`    | `modes/rediscovery.md`    | M4        |
 

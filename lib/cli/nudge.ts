@@ -19,12 +19,21 @@
  *
  * A reminder is addressed to a **person**, not a task (docs/DECISIONS.md D17): `deliverNudge`
  * takes a bundle of that person's tasks, sends one DM, and writes one `tl_nudge` per task
- * carrying the shared `message_ref`. `bin/nudge.mjs --task` is simply a bundle of one.
+ * carrying the shared `message_ref`.
+ *
+ * **`--task` names the task, not the message** (block B2.2, fixing the M1 tester's O-1). One
+ * DM per person also means one *cadence window* per person: nudging a single task used to
+ * spend the recipient's whole `nudge_min_gap_hours` on it and silence everything else they
+ * owed for two days. So `--task <id>` now sends the reminder that person is due — every task
+ * of theirs in that cycle that clears the same gate — with the named task always in it,
+ * whether or not it would have qualified on its own. `--only-this-task` restores the old
+ * single-task behaviour for the rare case where that is genuinely what you want, and says so
+ * out loud. The named task is what the gate is measured on and what the output reports.
  *
  * Public interface: `NUDGE_SPEC`, `runNudge`, `deliverNudge`, `recordBlockedNudge`,
- * `templateIdFor`, `NudgeContext`, `NudgeTargetTask`, `DeliveredNudge`.
+ * `templateIdFor`, `bundleFor`, `NudgeContext`, `NudgeTargetTask`, `DeliveredNudge`.
  *
- * Spec: docs/SPEC.md §7 step 2, §9, §10; docs/PLAN.md §2.9, §4 block B1.3.
+ * Spec: docs/SPEC.md §7 step 2, §9, §10; docs/PLAN.md §2.9, §4 block B1.3, §5 block B2.2.
  */
 
 import { toInstant } from '#lib/adapters/index.ts';
@@ -37,22 +46,32 @@ import { buildSnapshot } from '#lib/cli/snapshot.ts';
 import { nudgeFacts, renderTemplate } from '#lib/cli/templates.ts';
 import type { NudgeFactTask } from '#lib/cli/templates.ts';
 import type { Config } from '#lib/config.ts';
-import { detect, nudgeTemplateId, policyCheckFor } from '#lib/engine/index.ts';
+import { bundleTemplateId, detect, nudgeTemplateId, policyCheckFor } from '#lib/engine/index.ts';
 import type { TaskSignal } from '#lib/engine/index.ts';
 import type { TlCycle, TlNudge, TlNudgePolicyCheck, TlTask } from '#lib/types/engine.ts';
 import type { Worker, WorkerId } from '#lib/types/tier1.ts';
 
 export const NUDGE_SPEC: CliSpec = {
   name: 'nudge.mjs',
-  summary: 'send and record one policy-checked reminder for a single task',
-  usage: ['bin/nudge.mjs --task <id> [--template <id>] [--force-policy-check]'],
+  summary: "send and record one policy-checked reminder covering a recipient's eligible tasks",
+  usage: ['bin/nudge.mjs --task <id> [--only-this-task] [--template <id>] [--force-policy-check]'],
   flags: [
-    { name: 'task', type: 'string', value: '<id>', description: 'tl_task id to remind about' },
+    {
+      name: 'task',
+      type: 'string',
+      value: '<id>',
+      description: 'tl_task id; the reminder covers its owner’s eligible tasks in that cycle',
+    },
+    {
+      name: 'only-this-task',
+      type: 'boolean',
+      description: 'cover only the named task (it still spends the recipient’s cadence window)',
+    },
     {
       name: 'template',
       type: 'string',
       value: '<id>',
-      description: 'override the template id (default: nudge.<task_kind>.<first|followup>)',
+      description: 'override the template id (default: nudge.<task_kind|multi>.<first|followup>)',
     },
     {
       name: 'force-policy-check',
@@ -61,6 +80,10 @@ export const NUDGE_SPEC: CliSpec = {
     },
   ],
   notes: [
+    'One DM per person, so one cadence window per person: --task sends the reminder that\n' +
+      'recipient is due, bundling every task of theirs in the cycle that clears the same\n' +
+      'gate, with the named task always included. --only-this-task narrows it, and still\n' +
+      'consumes the whole nudge_min_gap_hours for everything else they owe.',
     'There is no flag that bypasses the policy check. When it fails, the nudge is not sent,\n' +
       'a tl_nudge is recorded with delivered:false and the failing policy_check, and the\n' +
       'command exits 1.',
@@ -99,6 +122,33 @@ export interface DeliveredNudge {
 /** The template a signal's nudge uses, unless the caller names one. */
 export function templateIdFor(task: TlTask, attemptN: number, override?: string): string {
   return override ?? nudgeTemplateId(task.kind, attemptN);
+}
+
+/**
+ * The tasks one manual reminder covers: the named task, plus every other task the same
+ * person owes in the same cycle that the tick itself would have nudged — open, not
+ * escalated, overdue, and past the same policy gate. Sorted by task id, named task first,
+ * so a run is reproducible and the operator can see what their DM will say.
+ */
+export function bundleFor(
+  named: TaskSignal,
+  signals: readonly TaskSignal[],
+  onlyThisTask: boolean,
+): TaskSignal[] {
+  if (onlyThisTask) return [named];
+  const others = signals
+    .filter(
+      (signal) =>
+        signal.task_id !== named.task_id &&
+        signal.participant_worker_id === named.participant_worker_id &&
+        !signal.terminal &&
+        signal.status !== 'escalated' &&
+        signal.overdue &&
+        signal.submission_id === undefined &&
+        policyCheckFor(signal).passed,
+    )
+    .sort((a, b) => (a.task_id < b.task_id ? -1 : 1));
+  return [named, ...others];
 }
 
 /**
@@ -209,6 +259,8 @@ async function signalForTask(taskId: string): Promise<{
   cycle: TlCycle;
   task: TlTask;
   signal: TaskSignal;
+  signals: TaskSignal[];
+  tasksById: Map<string, TlTask>;
   workers: Map<WorkerId, Worker>;
 }> {
   const { opened, record } = await openRuntimeForRecord('task', taskId);
@@ -220,27 +272,39 @@ async function signalForTask(taskId: string): Promise<{
     withLastTick: false,
   });
   const task = snapshot.tasks.find((row) => row.id === record.id) ?? record;
-  const signal = detect(snapshot).by_task.get(task.id);
+  const detected = detect(snapshot);
+  const signal = detected.by_task.get(task.id);
   if (signal === undefined) {
     throw new CliError('TASK_NOT_IN_CYCLE', `task "${taskId}" is not part of cycle ${cycle.id}.`);
   }
-  return { rt: opened.rt, config: opened.config, cycle, task, signal, workers };
+  return {
+    rt: opened.rt,
+    config: opened.config,
+    cycle,
+    task,
+    signal,
+    signals: detected.signals,
+    tasksById: new Map(snapshot.tasks.map((row) => [row.id, row])),
+    workers,
+  };
 }
 
 export async function runNudge(args: Args): Promise<CliOutput> {
   const taskId = args.require('task');
-  const { rt, config, cycle, task, signal, workers } = await signalForTask(taskId);
+  const onlyThisTask = args.bool('only-this-task');
+  const { rt, config, cycle, task, signal, signals, tasksById, workers } =
+    await signalForTask(taskId);
 
   const check = policyCheckFor(signal);
   const attemptN = task.attempt_n + 1;
-  const templateId = templateIdFor(task, attemptN, args.get('template'));
+  const override = args.get('template');
 
   if (args.bool('force-policy-check')) {
     return ok(
       {
         task_id: task.id,
         cycle_id: cycle.id,
-        template_id: templateId,
+        template_id: templateIdFor(task, attemptN, override),
         policy_check: check,
         sent: false,
       },
@@ -252,7 +316,7 @@ export async function runNudge(args: Args): Promise<CliOutput> {
     const nudge = await recordBlockedNudge(rt, {
       cycle,
       task,
-      templateId,
+      templateId: templateIdFor(task, attemptN, override),
       attemptN,
       policyCheck: check,
     });
@@ -263,28 +327,61 @@ export async function runNudge(args: Args): Promise<CliOutput> {
     ]);
   }
 
-  // `--task` names one task, so this is a bundle of one (docs/DECISIONS.md D17).
+  // One DM per person (docs/DECISIONS.md D17), so the bundle is the reminder this recipient
+  // is due — not only the task the operator happened to name.
+  const bundleSignals = bundleFor(signal, signals, onlyThisTask);
+  const bundle: NudgeTargetTask[] = bundleSignals.flatMap((entry) => {
+    const row = tasksById.get(entry.task_id);
+    if (row === undefined) return [];
+    return [
+      {
+        task: row,
+        attemptN: row.attempt_n + 1,
+        subject: row.external_ref === null ? undefined : workers.get(row.external_ref),
+      },
+    ];
+  });
+  const dmAttempt = bundle.reduce((max, entry) => Math.max(max, entry.attemptN), 1);
+  const templateId =
+    override ??
+    bundleTemplateId(
+      bundle.map((entry) => entry.task.kind),
+      dmAttempt,
+    );
+
   const delivered = await deliverNudge(rt, config, {
     cycle,
     toWorkerId: task.participant_worker_id,
     recipient: workers.get(task.participant_worker_id),
-    tasks: [
-      {
-        task,
-        attemptN,
-        subject: task.external_ref === null ? undefined : workers.get(task.external_ref),
-      },
-    ],
+    tasks: bundle,
     templateId,
-    attemptN,
+    attemptN: dmAttempt,
     policyCheck: check,
   });
 
-  const nudge = delivered.nudges[0] as TlNudge;
-  return ok({ ...nudge, sent: true }, [
-    `Nudged ${task.participant_worker_id} about ${task.id} (${task.kind}).`,
-    `  nudge     ${nudge.id}, attempt ${attemptN} of ${rt.policy.cadence.max_attempts}`,
-    `  template  ${templateId}`,
-    `  message   ${delivered.message_ref} on ${rt.policy.channels.nudge}`,
-  ]);
+  // The named task is what was asked about, so it is what the output reports.
+  const nudge =
+    delivered.nudges.find((entry) => entry.task_id === task.id) ?? (delivered.nudges[0] as TlNudge);
+  return ok(
+    {
+      ...nudge,
+      sent: true,
+      bundled_task_ids: bundle.map((entry) => entry.task.id),
+      nudge_ids: delivered.nudges.map((entry) => entry.id),
+    },
+    [
+      `Nudged ${task.participant_worker_id} about ${task.id} (${task.kind})` +
+        (bundle.length > 1 ? ` and ${bundle.length - 1} other task(s) they owe.` : '.'),
+      `  nudge     ${nudge.id}, attempt ${nudge.attempt_n} of ${rt.policy.cadence.max_attempts}`,
+      `  bundled   ${bundle.map((entry) => entry.task.id).join(', ')}`,
+      `  template  ${templateId}`,
+      `  message   ${delivered.message_ref} on ${rt.policy.channels.nudge}`,
+      ...(onlyThisTask
+        ? [
+            '  note      --only-this-task: the rest of this person’s work is silent for ' +
+              `${rt.policy.cadence.nudge_min_gap_hours}h all the same.`,
+          ]
+        : []),
+    ],
+  );
 }

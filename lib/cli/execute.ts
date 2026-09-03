@@ -20,21 +20,28 @@
  *                    DM to the recipient so a human learns a decision is waiting
  *   transition_cycle state.update('cycle', { status })
  *   close_cycle      state.update('cycle', { status: 'closed', closed_at })
- *   refresh_packet   packet.mjs's own assemblePacket
+ *   refresh_packet   packet.mjs's own assemblePacket — `calibration` for a review cycle,
+ *                    `debrief` for an interview one, chosen by the engine's `packet_kind`
  *   place_hold / rebook / post_change / propose_decision
- *                    loop 2's actions. Block B2.1 *plans* them; block B2.2 wires them to
- *                    availability.placeHold, state.update on the slot and its tasks,
- *                    channel.postChannel and createProposal. Until then they throw rather
- *                    than no-op: a silently skipped hold would leave a cycle believing a
- *                    panel is booked when no calendar was ever touched.
+ *                    loop 2's actions, in `lib/cli/execute-interview.ts` (block B2.2). Note
+ *                    what is *not* in that list: there is no `advance_stage` and no `reject`
+ *                    executor, here or anywhere, because a candidate decision leaves the
+ *                    engine only as a `tl_proposed_action` (spec §9).
  *
  * Public interface: `executePlan`, `ExecutedAction`, `ExecuteContext`.
  *
- * Spec: docs/SPEC.md §7, §9; docs/PLAN.md §4 block B1.3.
+ * Spec: docs/SPEC.md §7, §9; docs/PLAN.md §4 block B1.3, §5 block B2.2.
  */
 
 import { toInstant } from '#lib/adapters/index.ts';
 import type { Runtime } from '#lib/adapters/index.ts';
+import {
+  executePlaceHold,
+  executePostChange,
+  executeProposeDecision,
+  executeRebook,
+} from '#lib/cli/execute-interview.ts';
+import type { InterviewExecuteContext } from '#lib/cli/execute-interview.ts';
 import { deliverNudge } from '#lib/cli/nudge.ts';
 import type { NudgeTargetTask } from '#lib/cli/nudge.ts';
 import { assemblePacket } from '#lib/cli/packet.ts';
@@ -91,6 +98,16 @@ export async function executePlan(
   const tasks = new Map<string, TlTask>(context.snapshot.tasks.map((task) => [task.id, task]));
   let cycle: TlCycle = context.snapshot.cycle;
   const done: ExecutedAction[] = [];
+
+  /** Built lazily, and always from the *current* cycle record and task map. */
+  const interviewContext = (): InterviewExecuteContext => ({
+    rt,
+    config,
+    cycle,
+    snapshot: context.snapshot,
+    workers,
+    tasks,
+  });
 
   for (const action of plan.actions) {
     switch (action.kind) {
@@ -242,19 +259,34 @@ export async function executePlan(
         done.push({
           kind: action.kind,
           record_id: result.packet.id,
-          detail: `${action.packet_kind} inputs_hash ${result.packet.inputs_hash.slice(0, 12)}…`,
+          record_ids: result.anomalies.map((anomaly) => anomaly.id),
+          detail:
+            `${action.packet_kind} inputs_hash ${result.packet.inputs_hash.slice(0, 12)}…` +
+            (result.anomalies.length === 0
+              ? ''
+              : `, ${result.anomalies.length} withheld scorecard(s) recorded as anomalies`),
         });
         break;
       }
 
-      case 'place_hold':
-      case 'rebook':
-      case 'post_change':
+      case 'place_hold': {
+        done.push(await executePlaceHold(interviewContext(), action));
+        break;
+      }
+
+      case 'rebook': {
+        done.push(await executeRebook(interviewContext(), action));
+        break;
+      }
+
+      case 'post_change': {
+        done.push(await executePostChange(interviewContext(), action));
+        break;
+      }
+
       case 'propose_decision': {
-        throw new Error(
-          `planned action "${action.kind}" is planned by the interview engine (block B2.1) ` +
-            'but is not wired to the ports yet; block B2.2 executes it.',
-        );
+        done.push(await executeProposeDecision(interviewContext(), action));
+        break;
       }
 
       default: {

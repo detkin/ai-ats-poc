@@ -145,7 +145,7 @@ describe('cycle open', () => {
     expect(tasks.every((task) => task.original_due_at === task.due_at)).toBe(true);
   });
 
-  it('refuses to open an interview cycle before M2', async () => {
+  it('records the application and its requisition in an interview cycle scope', async () => {
     setNow(OPEN_AT);
     const { data } = await runJson<TlCycle>(CYCLE_SPEC, runCycle, [
       'create',
@@ -160,9 +160,54 @@ describe('cycle open', () => {
       '--deadline',
       '2026-09-30',
     ]);
+    // The requisition is read off the real application, never taken from the caller.
+    expect(data.scope.application_id).toBe('app_0001');
+    expect(data.scope.requisition_id).toBe('req_staff_eng');
+    expect(data.status).toBe('configured');
+  });
+
+  it('refuses --type interview without an application', async () => {
+    setNow(OPEN_AT);
+    const run = await runCli(
+      CYCLE_SPEC,
+      runCycle,
+      [
+        'create',
+        '--type',
+        'interview',
+        '--name',
+        'Onsite — nobody',
+        '--owner',
+        'w_0114',
+        '--deadline',
+        '2026-09-30',
+      ],
+      2,
+    );
+    expect(run.code).toBe(2);
+    expect(run.stderr).toContain('--application');
+  });
+
+  it('refuses to open an interview cycle whose application is not ACTIVE at Onsite', async () => {
+    setNow(OPEN_AT);
+    // app_0033 is a silver medalist: REJECTED on a closed requisition.
+    const { data } = await runJson<TlCycle>(CYCLE_SPEC, runCycle, [
+      'create',
+      '--type',
+      'interview',
+      '--name',
+      'Onsite — silver medalist',
+      '--owner',
+      'w_0114',
+      '--application',
+      'app_0033',
+      '--deadline',
+      '2026-09-30',
+    ]);
     const run = await runCli(CYCLE_SPEC, runCycle, ['open', '--cycle', data.id]);
     expect(run.code).toBe(1);
-    expect(run.stderr).toContain('M2');
+    expect(run.stderr).toContain('REJECTED');
+    expect(run.stderr).toContain('decision of record');
   });
 
   it('reports an unknown cycle id as a domain failure', async () => {

@@ -14,13 +14,21 @@
  *     **outside** `state/` on purpose: it is scratch for the "diff vs last tick" step, not a
  *     `tl_*` object, so it is not ledgered, not audited and safe to delete.
  *
+ * M2 (block B2.2) adds one branch: an `interview` cycle also loads `lib/cli/snapshot-interview.ts`,
+ * which reads the application, the Tier-3 slots and scorecards, the panel's candidate hours
+ * and the interviewers' Slack replies. Loop 1's reads are untouched, and the extra reads
+ * happen only for `cycle.type === 'interview'` — the split is by cycle *type*, never by a
+ * flag, which is what "one engine, two loops" means in practice (spec §1 claim 1).
+ *
  * Public interface:
- *   buildSnapshot(rt, cycleId, options?) -> { snapshot, cycle, workers, participants, packets }
+ *   buildSnapshot(rt, cycleId, now, options?) -> SnapshotResult
  *   loadCycle(rt, cycleId), calibrationInputsFor(rt, cycle, workers, submissions)
+ *   readWorkers(rt), newestPacketOfKind(packets, kind), newestCalibrationPacket(packets)
  *   readLastTick(config, cycleId), writeLastTick(config, cycleId, entry), ticksPathFor
  *   TICKS_DIRNAME, SnapshotResult, SnapshotOptions
  *
- * Spec: docs/SPEC.md §3, §4 (absence is authoritative), §7 step 1; docs/PLAN.md §4 block B1.3.
+ * Spec: docs/SPEC.md §3, §4 (absence is authoritative), §7 step 1; docs/PLAN.md §4 block B1.3,
+ * §5 block B2.2.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -28,6 +36,8 @@ import { dirname, join } from 'node:path';
 
 import type { Runtime } from '#lib/adapters/index.ts';
 import { CliError } from '#lib/cli/runtime.ts';
+import { loadInterviewContext } from '#lib/cli/snapshot-interview.ts';
+import type { InterviewContext } from '#lib/cli/snapshot-interview.ts';
 import type { Config } from '#lib/config.ts';
 import { calibrationInputsHash, dateOf, participantsFor } from '#lib/engine/index.ts';
 import type {
@@ -42,6 +52,7 @@ import type {
   TlCycle,
   TlNudge,
   TlPacket,
+  TlPacketKind,
   TlProposedAction,
   TlReviewSubmission,
   TlTask,
@@ -56,6 +67,12 @@ export interface SnapshotOptions {
   scan?: readonly string[];
   /** Include `last_tick` from the ticks file. `false` for one-off reads like `nudge.mjs`. */
   withLastTick?: boolean;
+  /**
+   * Let an interview cycle write back what it observed — a Slack-filed scorecard moves its
+   * pending `tl_scorecard` to `submitted`. Only `bin/tick.mjs` passes `true`; every other
+   * caller reads.
+   */
+  observe?: boolean;
 }
 
 export interface SnapshotResult {
@@ -63,8 +80,10 @@ export interface SnapshotResult {
   cycle: TlCycle;
   workers: Map<WorkerId, Worker>;
   participants: Worker[];
-  /** Calibration packets already on record for this cycle, oldest first. */
+  /** Packets already on record for this cycle, oldest first. */
   packets: TlPacket[];
+  /** Loop 2's reads, when this is an interview cycle. */
+  interview?: InterviewContext;
 }
 
 /** `<TL_DATA_DIR>/ticks/<cycle_id>.json`. */
@@ -194,14 +213,22 @@ export async function calibrationInputsFor(
   };
 }
 
-/** The newest calibration packet on record, by `created_at` then id. */
-export function newestCalibrationPacket(packets: readonly TlPacket[]): TlPacket | undefined {
+/** The newest packet of one kind on record, by `created_at` then id. */
+export function newestPacketOfKind(
+  packets: readonly TlPacket[],
+  kind: TlPacketKind,
+): TlPacket | undefined {
   return [...packets]
-    .filter((packet) => packet.kind === 'calibration')
+    .filter((packet) => packet.kind === kind)
     .sort((a, b) =>
       a.created_at === b.created_at ? (a.id < b.id ? -1 : 1) : a.created_at < b.created_at ? -1 : 1,
     )
     .at(-1);
+}
+
+/** The newest calibration packet on record. */
+export function newestCalibrationPacket(packets: readonly TlPacket[]): TlPacket | undefined {
+  return newestPacketOfKind(packets, 'calibration');
 }
 
 /**
@@ -226,9 +253,25 @@ export async function buildSnapshot(
 
   const workers = await readWorkers(rt);
   const participants = participantsFor(cycle, workers);
-  const owed = [...new Set(tasks.map((task) => task.participant_worker_id))].sort();
+
+  // Loop 2's reads come first, because the people the tick must ask about depend on them:
+  // the panel, and — once somebody has declined — the peers who could stand in for them.
+  const interview =
+    cycle.type === 'interview'
+      ? await loadInterviewContext(rt, cycle, workers, now, { observe: options.observe === true })
+      : undefined;
+
+  const owed = [
+    ...new Set([
+      ...tasks.map((task) => task.participant_worker_id),
+      ...(interview?.availability_ids ?? []),
+    ]),
+  ].sort();
   const availability = await readAvailability(rt, owed, now);
-  const untrusted = await readUntrusted(rt, submissions, options.scan ?? []);
+  const untrusted = [
+    ...(await readUntrusted(rt, submissions, options.scan ?? [])),
+    ...(interview?.untrusted ?? []),
+  ];
   const departments = new Map((await rt.ports.graph.searchDepartments()).map((d) => [d.id, d]));
 
   const snapshot: TickSnapshot = {
@@ -259,5 +302,25 @@ export async function buildSnapshot(
     if (newest !== undefined) snapshot.last_packet_inputs_hash = newest.inputs_hash;
   }
 
-  return { snapshot, cycle, workers, participants, packets };
+  if (interview !== undefined) {
+    snapshot.application = interview.application;
+    snapshot.requisition = interview.requisition;
+    snapshot.levels = interview.levels;
+    snapshot.slots = interview.slots;
+    snapshot.interview_slots = interview.interview_slots;
+    snapshot.scorecards = interview.scorecards;
+    snapshot.declines = interview.declines;
+    snapshot.debrief_inputs_hash = interview.debrief_inputs_hash;
+    const newest = newestPacketOfKind(packets, 'debrief');
+    if (newest !== undefined) snapshot.last_packet_inputs_hash = newest.inputs_hash;
+  }
+
+  return {
+    snapshot,
+    cycle,
+    workers,
+    participants,
+    packets,
+    ...(interview === undefined ? {} : { interview }),
+  };
 }

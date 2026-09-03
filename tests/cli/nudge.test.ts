@@ -41,6 +41,18 @@ const selfTaskOf = (workerId: string): TlTask => {
   return task;
 };
 
+/** Some other overdue task the same person owes — used to prove the gap is per person. */
+const peerTaskOf = (workerId: string): string => {
+  const task = (readState<'task'>(dataDir, 'tasks.json') as TlTask[]).find(
+    (row) =>
+      row.cycle_id === CYCLE &&
+      row.kind === 'write_peer_review' &&
+      row.participant_worker_id === workerId,
+  );
+  if (task === undefined) throw new Error(`no peer-review task for ${workerId}`);
+  return task.id;
+};
+
 beforeAll(async () => {
   dataDir = seedDataDir();
   setNow(OPEN_AT);
@@ -95,22 +107,33 @@ describe('nudge.mjs on an absent participant', () => {
 });
 
 describe('nudge.mjs on a present participant', () => {
-  it('sends, records the nudge and moves the task to nudged', async () => {
+  it('sends one DM covering everything the recipient owes, and moves those tasks', async () => {
     setNow(ANCHOR);
-    // w_0021 is the HRBP in San Francisco: present, and 09:00 local at the anchor.
+    // w_0021 is the HRBP in San Francisco: present, and 09:00 local at the anchor. At the
+    // anchor they owe an overdue self review *and* overdue peer reviews, and one DM covers
+    // the lot — one reminder per person, one cadence window per person (block B2.2).
     const before = selfTaskOf('w_0021');
-    const { run, data } = await runJson<TlNudge & { sent: boolean }>(NUDGE_SPEC, runNudge, [
-      '--task',
-      before.id,
-    ]);
+    const { run, data } = await runJson<
+      TlNudge & { sent: boolean; bundled_task_ids: string[]; nudge_ids: string[] }
+    >(NUDGE_SPEC, runNudge, ['--task', before.id]);
 
     expect(run.code).toBe(0);
     expect(data.sent).toBe(true);
     expect(data.delivered).toBe(true);
+    // The record reported is the one for the task that was named.
+    expect(data.task_id).toBe(before.id);
     expect(data.attempt_n).toBe(before.attempt_n + 1);
-    expect(data.template_id).toBe('nudge.write_self_review.first');
     expect(data.channel).toBe('slack_dm');
     expect(data.policy_check.passed).toBe(true);
+
+    // More than one task, so the bundle template; every bundled nudge shares the one DM.
+    expect(data.bundled_task_ids).toContain(before.id);
+    expect(data.bundled_task_ids.length).toBeGreaterThan(1);
+    expect(data.template_id).toBe('nudge.multi.first');
+    expect(data.nudge_ids.length).toBe(data.bundled_task_ids.length);
+    expect(
+      readOutbox(dataDir).filter((line) => line.message_ref === data.message_ref),
+    ).toHaveLength(1);
 
     const after = selfTaskOf('w_0021');
     expect(after.status).toBe('nudged');
@@ -150,7 +173,9 @@ describe('nudge.mjs on a present participant', () => {
   });
 
   it('reports a missing template as a domain failure rather than sending blank text', async () => {
-    setNow('2026-09-11T16:00:00Z');
+    // Thursday 2026-09-10, 48 h past the previous reminder: the gate passes and the render
+    // is what fails — nothing is sent, and no attempt is spent.
+    setNow('2026-09-10T16:00:00Z');
     const task = selfTaskOf('w_0021');
     const outboxBefore = readOutbox(dataDir).length;
     const run = await runCli(NUDGE_SPEC, runNudge, [
@@ -169,6 +194,25 @@ describe('nudge.mjs on a present participant', () => {
     const run = await runCli(NUDGE_SPEC, runNudge, ['--task', 'tl_task_nope']);
     expect(run.code).toBe(1);
     expect(run.stderr).toContain('no task with id "tl_task_nope"');
+  });
+
+  it('narrows to one task with --only-this-task', async () => {
+    // Friday 2026-09-11, 09:00 in San Francisco — three days past the last reminder.
+    setNow('2026-09-11T16:00:00Z');
+    const task = selfTaskOf('w_0021');
+    const { run, data } = await runJson<
+      TlNudge & { bundled_task_ids: string[]; nudge_ids: string[] }
+    >(NUDGE_SPEC, runNudge, ['--task', task.id, '--only-this-task']);
+
+    expect(run.code).toBe(0);
+    expect(data.bundled_task_ids).toEqual([task.id]);
+    expect(data.nudge_ids).toHaveLength(1);
+    expect(data.template_id).toBe('nudge.write_self_review.followup');
+    // And the rest of w_0021's work is silent for the whole cadence window all the same:
+    // the gap is measured per person (docs/DECISIONS.md D17).
+    const blocked = await runJson<TlNudge>(NUDGE_SPEC, runNudge, ['--task', peerTaskOf('w_0021')]);
+    expect(blocked.run.code).toBe(1);
+    expect(blocked.data.policy_check.reasons).toContain('nudge_gap_not_elapsed');
   });
 });
 

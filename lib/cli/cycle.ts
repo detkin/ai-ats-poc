@@ -19,10 +19,20 @@
  * `close` refuses unless the engine's own close condition holds — every task terminal and
  * every proposal decided — and lists what is outstanding when it does not.
  *
- * Public interface: `CYCLE_SPEC`, `runCycle`, `createCycle`, `openCycle`, `closeCycle`,
- * `showCycle`, `CreateCycleInput`, `OpenResult`, `CloseResult`, `ShowResult`.
+ * **An interview cycle opens differently, and the difference is the point** (block B2.2).
+ * `create --type interview --application <app_id>` resolves the application's requisition and
+ * records both ids in `scope`, so the cycle is keyed to real ATS records and copies no value
+ * off them (spec §3). `open` then checks one thing only — that the application is still
+ * `ACTIVE` at stage `Onsite` when it is re-read — flips the cycle to `running`, and creates
+ * **no tasks at all**. There is nothing to owe until a time exists: the first tick books the
+ * panel and the hold is what brings the attendance and scorecard tasks into being. A review
+ * cycle knows its work from the org chart; an interview cycle learns it from a calendar.
  *
- * Spec: docs/SPEC.md §6, §7, §8 loop 1; docs/PLAN.md §2.9, §4 block B1.3.
+ * Public interface: `CYCLE_SPEC`, `runCycle`, `createCycle`, `openCycle`, `closeCycle`,
+ * `showCycle`, `ONSITE_STAGE`, `CreateCycleInput`, `OpenResult`, `CloseResult`, `ShowResult`.
+ *
+ * Spec: docs/SPEC.md §6, §7, §8 loop 1, §8 loop 2; docs/PLAN.md §2.9, §4 block B1.3,
+ * §5 block B2.2.
  */
 
 import type { Runtime } from '#lib/adapters/index.ts';
@@ -46,6 +56,9 @@ import type {
 
 /** Where the cycle's policy came from; the tenant layer's own path (docs/DECISIONS.md D3). */
 export const POLICY_REF = 'tenant/policy.yml';
+
+/** The one application stage an interview loop may be opened on (spec §8 loop 2). */
+export const ONSITE_STAGE = 'Onsite';
 
 export const CYCLE_SPEC: CliSpec = {
   name: 'cycle.mjs',
@@ -145,15 +158,42 @@ export function parseDeadline(raw: string): string {
   return raw;
 }
 
+/**
+ * The scope an interview cycle is keyed by: the application, and the requisition it is on.
+ * Both are read from the real ATS records rather than taken on the caller's word, and both
+ * are stored as **ids only** — the stage, the status and the candidate stay where they live
+ * and are re-read on every tick (spec §3).
+ */
+async function interviewScopeFor(rt: Runtime, applicationId: string): Promise<TlCycleScope> {
+  const application = await rt.ports.ats.getApplication(applicationId);
+  if (application === null) {
+    throw new CliError(
+      'APPLICATION_NOT_FOUND',
+      `no application with id "${applicationId}" to run an interview loop on.`,
+    );
+  }
+  return { application_id: application.id, requisition_id: application.job_id };
+}
+
 /** Record a new cycle in `configured`. It owes nothing until `open`. */
 export async function createCycle(rt: Runtime, input: CreateCycleInput): Promise<TlCycle> {
   const owner = await rt.ports.graph.lookupPerson(input.owner);
   if (owner === null) {
     throw new CliError('OWNER_NOT_FOUND', `no worker with id "${input.owner}" to own the cycle.`);
   }
+  if (input.type === 'interview' && input.applicationId === undefined) {
+    throw new UsageError(
+      'cycle.mjs: --type interview needs --application <app_id> — an interview loop is about ' +
+        'one real application.',
+    );
+  }
   const scope: TlCycleScope = {
     ...(input.departments.length === 0 ? {} : { department_ids: [...input.departments] }),
-    ...(input.applicationId === undefined ? {} : { application_id: input.applicationId }),
+    ...(input.applicationId === undefined
+      ? {}
+      : input.type === 'interview'
+        ? await interviewScopeFor(rt, input.applicationId)
+        : { application_id: input.applicationId }),
   };
 
   return rt.ports.state.create('cycle', {
@@ -169,15 +209,52 @@ export async function createCycle(rt: Runtime, input: CreateCycleInput): Promise
 }
 
 /**
+ * Open an interview loop. Two things happen and no more: the trigger is re-checked against
+ * the **real** application (spec §8 loop 2: "trigger on a real application reaching stage
+ * Onsite, re-read from REST"), and the cycle starts running.
+ *
+ * No tasks are created. Attendance and scorecards are owed *at a time*, and no time exists
+ * until the first tick has looked at the panel's calendars and placed a hold — so the tick
+ * creates them, as `place_hold`, and the hold is the evidence that they are real.
+ */
+async function openInterviewCycle(rt: Runtime, cycle: TlCycle, now: string): Promise<OpenResult> {
+  const applicationId = cycle.scope.application_id;
+  if (applicationId === undefined) {
+    throw new CliError(
+      'CYCLE_HAS_NO_APPLICATION',
+      `interview cycle ${cycle.id} has no application in scope; it cannot be opened.`,
+    );
+  }
+  const application = await rt.ports.ats.getApplication(applicationId);
+  if (application === null) {
+    throw new CliError('APPLICATION_NOT_FOUND', `no application with id "${applicationId}".`);
+  }
+  if (application.status !== 'ACTIVE' || application.stage !== ONSITE_STAGE) {
+    throw new CliError(
+      'APPLICATION_NOT_AT_ONSITE',
+      `application ${application.id} is ${application.status} at stage "${application.stage}"; ` +
+        `the interview loop opens on an ACTIVE application at stage "${ONSITE_STAGE}". ` +
+        'Moving it there is a decision of record a named human makes in the ATS.',
+    );
+  }
+
+  const opened = await rt.ports.state.update('cycle', cycle.id, {
+    opened_at: now,
+    status: 'running',
+  });
+  return { cycle: opened, participants: 0, tasks: [], submissions: 0, by_kind: {} };
+}
+
+/**
  * Open a review cycle: `opened_at`, `running`, then one `tl_task` and one pending
  * `tl_review_submission` per unit of work.
  */
 export async function openCycle(rt: Runtime, cycleId: string, now: string): Promise<OpenResult> {
   const cycle = await loadCycle(rt, cycleId);
-  if (cycle.type !== 'review') {
+  if (cycle.type !== 'review' && cycle.type !== 'interview') {
     throw new CliError(
       'CYCLE_TYPE_NOT_YET',
-      `opening a ${cycle.type} cycle lands in M2 (block B2.2); M1 opens review cycles.`,
+      `opening a ${cycle.type} cycle lands in M3; M2 opens review and interview cycles.`,
     );
   }
   if (cycle.opened_at !== null) {
@@ -187,6 +264,7 @@ export async function openCycle(rt: Runtime, cycleId: string, now: string): Prom
     );
   }
   assertTransition('cycle', cycle.status, 'running', rt.states);
+  if (cycle.type === 'interview') return openInterviewCycle(rt, cycle, now);
 
   const workers = await readWorkers(rt);
   const participants = participantsFor(cycle, workers);
@@ -277,6 +355,17 @@ export async function showCycle(rt: Runtime, cycleId: string): Promise<ShowResul
 
 /* ------------------------------------------------------------------- the CLI */
 
+/** One line naming what the cycle is about: departments, or the application it follows. */
+function describeScope(cycle: TlCycle): string {
+  const { application_id, requisition_id, department_ids } = cycle.scope;
+  if (application_id !== undefined) {
+    return `application ${application_id}${
+      requisition_id === undefined ? '' : ` on requisition ${requisition_id}`
+    }`;
+  }
+  return department_ids?.join(', ') ?? 'whole company';
+}
+
 async function runCreate(args: Args): Promise<CliOutput> {
   const type = parseCycleType(args.require('type'));
   const deadline = parseDeadline(args.require('deadline'));
@@ -296,7 +385,7 @@ async function runCreate(args: Args): Promise<CliOutput> {
     `Created ${cycle.type} cycle ${cycle.id} — ${cycle.name} (${cycle.status})`,
     `  owner     ${cycle.owner_worker_id}`,
     `  deadline  ${cycle.deadline}`,
-    `  scope     ${cycle.scope.department_ids?.join(', ') ?? 'whole company'}`,
+    `  scope     ${describeScope(cycle)}`,
     `  open it   node bin/cycle.mjs open --cycle ${cycle.id}`,
   ]);
 }
@@ -318,12 +407,17 @@ async function runOpen(args: Args): Promise<CliOutput> {
     },
     [
       `Opened ${result.cycle.id} at ${result.cycle.opened_at} (${result.cycle.status})`,
-      `  participants  ${result.participants}`,
-      `  tasks         ${result.tasks.length}`,
-      ...Object.entries(result.by_kind)
-        .sort()
-        .map(([kind, count]) => `    ${kind.padEnd(22)} ${count}`),
-      `  submissions   ${result.submissions} pending shadow record(s)`,
+      `  scope         ${describeScope(result.cycle)}`,
+      ...(result.cycle.type === 'interview'
+        ? ['  tasks         0 — the first tick books the panel; the hold creates the work']
+        : [
+            `  participants  ${result.participants}`,
+            `  tasks         ${result.tasks.length}`,
+            ...Object.entries(result.by_kind)
+              .sort()
+              .map(([kind, count]) => `    ${kind.padEnd(22)} ${count}`),
+            `  submissions   ${result.submissions} pending shadow record(s)`,
+          ]),
       `  tick it       node bin/tick.mjs --cycle ${result.cycle.id}`,
     ],
   );
@@ -366,7 +460,7 @@ async function runShow(args: Args): Promise<CliOutput> {
     `  owner       ${result.cycle.owner_worker_id}`,
     `  opened_at   ${result.cycle.opened_at ?? '(not opened)'}`,
     `  deadline    ${result.cycle.deadline}`,
-    `  scope       ${result.cycle.scope.department_ids?.join(', ') ?? 'whole company'}`,
+    `  scope       ${describeScope(result.cycle)}`,
     `  tasks       ${result.task_total}` +
       (result.task_total === 0
         ? ''

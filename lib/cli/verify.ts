@@ -27,29 +27,52 @@
  *  7. `decisions_by_active_worker`— a decided proposal names a decider, and that worker is
  *     ACTIVE.
  *
+ * Loop 2 adds three (block B2.2):
+ *
+ *  8. `interview_slot_held`       — every `tl_interview_slot` carrying a `hold_ref` has a
+ *     matching line in `holds.jsonl` **and** an `availability.placeHold` `ok` line in the
+ *     ledger naming it. A slot that claims a booking no calendar ever received is the loop-2
+ *     shape of the drift rule 1 catches for loop 1.
+ *  9. `scorecard_task_has_submission` — a `submit_scorecard` task marked `done` has a
+ *     `submitted` `tl_scorecard` for that application and that interviewer. After a re-book
+ *     that means the *stand-in's* scorecard, which is why the executor re-keys it.
+ * 10. `no_stage_in_engine_state`  — **no `tl_*` record anywhere carries a `stage`.** Spec §3
+ *     is a rule about what the engine may hold, not only about what it writes today: a stage
+ *     lives on the real application, is re-read every tick, and moves only when a named human
+ *     moves it. A `stage` key appearing on engine state would mean a shadow pipeline had
+ *     started, and this rule fails the moment one does. It is checked on the whole runtime
+ *     state, not per cycle.
+ *
  * Everything is read through `rt.raw` — verifying must not itself write ledger lines, or the
  * second run would have a different ledger to verify than the first.
  *
  * Public interface: `VERIFY_SPEC`, `runVerify`, `verifyLoops`, `VerifyReport`, `RuleResult`,
  * `ENGINE_ID_RE`.
  *
- * Spec: docs/SPEC.md §5, §9, §10; docs/PLAN.md §2.9, §4 block B1.3.
+ * Spec: docs/SPEC.md §3, §5, §9, §10; docs/PLAN.md §2.9, §4 block B1.3, §5 block B2.2.
  */
 
-import type { Runtime } from '#lib/adapters/index.ts';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { HOLDS_FILENAME } from '#lib/adapters/index.ts';
+import type { HoldLine, Runtime } from '#lib/adapters/index.ts';
 import type { Args, CliSpec } from '#lib/cli/args.ts';
 import { fail, ok } from '#lib/cli/output.ts';
 import type { CliOutput } from '#lib/cli/output.ts';
 import { openRuntime } from '#lib/cli/runtime.ts';
 import { submissionKindOfTask } from '#lib/engine/index.ts';
 import { canonicalState } from '#lib/states/index.ts';
+import { STATE_KINDS } from '#lib/types/engine.ts';
 import type {
   TlAgentAction,
   TlCycle,
+  TlInterviewSlot,
   TlNudge,
   TlPacket,
   TlProposedAction,
   TlReviewSubmission,
+  TlScorecard,
   TlTask,
 } from '#lib/types/engine.ts';
 import type { Worker, WorkerId } from '#lib/types/tier1.ts';
@@ -95,6 +118,13 @@ interface CycleBundle {
   proposals: TlProposedAction[];
   submissions: TlReviewSubmission[];
   packets: TlPacket[];
+  /**
+   * Tier-3 records for the application this cycle is about. They are keyed by
+   * `application_id`, not by cycle — they hang off a real ATS record, which is the whole
+   * point of Tier 3 (spec §3) — so they are fetched by that id and are empty for loop 1.
+   */
+  slots: TlInterviewSlot[];
+  scorecards: TlScorecard[];
 }
 
 function rule(id: string, description: string): RuleResult {
@@ -104,6 +134,8 @@ function rule(id: string, description: string): RuleResult {
 /** Every state record for one cycle, read unledgered. */
 async function readBundle(rt: Runtime, cycle: TlCycle): Promise<CycleBundle> {
   const filter = { cycle_id: cycle.id } as const;
+  const applicationId = cycle.scope.application_id;
+  const byApplication = applicationId === undefined ? undefined : { application_id: applicationId };
   return {
     cycle,
     tasks: await rt.raw.state.list('task', filter),
@@ -111,7 +143,51 @@ async function readBundle(rt: Runtime, cycle: TlCycle): Promise<CycleBundle> {
     proposals: await rt.raw.state.list('proposed_action', filter),
     submissions: await rt.raw.state.list('review_submission', filter),
     packets: await rt.raw.state.list('packet', filter),
+    slots:
+      byApplication === undefined ? [] : await rt.raw.state.list('interview_slot', byApplication),
+    scorecards:
+      byApplication === undefined ? [] : await rt.raw.state.list('scorecard', byApplication),
   };
+}
+
+/** Every `hold_ref` in `<TL_DATA_DIR>/holds.jsonl`. A missing file is an empty calendar. */
+function heldRefs(dataDir: string): Set<string> {
+  const path = join(dataDir, HOLDS_FILENAME);
+  if (!existsSync(path)) return new Set();
+  const refs = new Set<string>();
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (line.trim().length === 0) continue;
+    try {
+      const parsed = JSON.parse(line) as Partial<HoldLine>;
+      if (typeof parsed.hold_ref === 'string') refs.add(parsed.hold_ref);
+    } catch {
+      // A malformed line is not a hold; rule 8 reports the slot that expected one.
+    }
+  }
+  return refs;
+}
+
+/** `application|interviewer` keys of every scorecard that has actually been filed. */
+function submittedScorecardKeys(scorecards: readonly TlScorecard[]): Set<string> {
+  const keys = new Set<string>();
+  for (const card of scorecards) {
+    if (card.status !== 'submitted') continue;
+    keys.add(`${card.application_id}|${card.interviewer_worker_id}`);
+  }
+  return keys;
+}
+
+/**
+ * Does this engine record hold a `stage`? Checked at the top level and one level into
+ * `payload`, which is the only free-form object on a `tl_*` record.
+ */
+function stageKeyIn(record: Record<string, unknown>): string | null {
+  if ('stage' in record) return 'stage';
+  const payload = record['payload'];
+  if (payload !== null && typeof payload === 'object' && 'stage' in payload) {
+    return 'payload.stage';
+  }
+  return null;
 }
 
 function submittedKeys(submissions: readonly TlReviewSubmission[]): Set<string> {
@@ -149,6 +225,15 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
     references: rule('references_resolve', 'participants and external_refs are real workers'),
     status: rule('cycle_status_canonical', 'cycle status is a canonical state'),
     decisions: rule('decisions_by_active_worker', 'decided proposals name an ACTIVE decider'),
+    holds: rule(
+      'interview_slot_held',
+      'a held interview slot has a calendar hold and a ledger line',
+    ),
+    scorecards: rule(
+      'scorecard_task_has_submission',
+      'a done submit_scorecard task has a submitted tl_scorecard',
+    ),
+    noStage: rule('no_stage_in_engine_state', 'no tl_* record holds an application stage'),
   };
 
   if (cycleId !== undefined && cycles.length === 0) {
@@ -162,6 +247,17 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
   const resultRefs = new Set(
     ledger.map((entry) => entry.result_ref).filter((ref): ref is string => typeof ref === 'string'),
   );
+  /** `hold_ref`s the ledger says `availability.placeHold` actually returned. */
+  const ledgeredHolds = new Set(
+    ledger
+      .filter(
+        (entry) =>
+          entry.port === 'availability' && entry.function === 'placeHold' && entry.result === 'ok',
+      )
+      .map((entry) => entry.result_ref)
+      .filter((ref): ref is string => typeof ref === 'string'),
+  );
+  const calendarHolds = heldRefs(rt.config.dataDir);
   /** How many `channel.sendDirect ok` lines name each `message_ref`. Must be exactly one. */
   const sendsByRef = new Map<string, number>();
   for (const entry of ledger) {
@@ -211,6 +307,25 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
       if (proposal.kind !== 'escalate') continue;
       for (const ref of proposal.evidence_refs) cited.add(ref);
     }
+    const filedScorecards = submittedScorecardKeys(bundle.scorecards);
+
+    // 8. a held slot is really held: on the calendar, and in the ledger.
+    for (const slot of bundle.slots) {
+      if (slot.hold_ref === null) continue;
+      rules.holds.checked += 1;
+      if (!calendarHolds.has(slot.hold_ref)) {
+        rules.holds.findings.push({
+          id: slot.id,
+          detail: `slot claims hold "${slot.hold_ref}" but no such line exists in ${HOLDS_FILENAME}`,
+        });
+      }
+      if (!ledgeredHolds.has(slot.hold_ref)) {
+        rules.holds.findings.push({
+          id: slot.id,
+          detail: `hold "${slot.hold_ref}" has no availability.placeHold ok entry in the ledger`,
+        });
+      }
+    }
 
     for (const task of bundle.tasks) {
       // 1. done → submitted shadow record
@@ -230,6 +345,20 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
               detail: `task is done but no submitted tl_review_submission exists for ${task.participant_worker_id} → ${task.external_ref ?? '?'} (${kind})`,
             });
           }
+        }
+      }
+
+      // 9. done scorecard task → the write-up actually exists, keyed to whoever now owes it
+      if (task.kind === 'submit_scorecard') {
+        rules.scorecards.checked += 1;
+        const key = `${task.external_ref ?? ''}|${task.participant_worker_id}`;
+        if (task.status === 'done' && !filedScorecards.has(key)) {
+          rules.scorecards.findings.push({
+            id: task.id,
+            detail:
+              'task is done but no submitted tl_scorecard exists for ' +
+              `${task.participant_worker_id} on application ${task.external_ref ?? '?'}`,
+          });
         }
       }
 
@@ -324,6 +453,8 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
       ...bundle.proposals.map((proposal) => ({ id: proposal.id, kind: 'proposed_action' })),
       ...bundle.submissions.map((s) => ({ id: s.id, kind: 'review_submission' })),
       ...bundle.packets.map((packet) => ({ id: packet.id, kind: 'packet' })),
+      ...bundle.slots.map((slot) => ({ id: slot.id, kind: 'interview_slot' })),
+      ...bundle.scorecards.map((card) => ({ id: card.id, kind: 'scorecard' })),
     ];
     for (const record of records) {
       if (!ENGINE_ID_RE.test(record.id)) continue;
@@ -334,6 +465,22 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
           detail: `${record.kind} exists in state but no ledger entry names it as result_ref`,
         });
       }
+    }
+  }
+
+  // 10. Tier 1 owns the stage. Checked over the whole runtime state, not one cycle: the rule
+  // is "the engine never holds a value the real object holds" (spec §3), and a shadow
+  // pipeline would not politely confine itself to the cycle being verified.
+  for (const kind of STATE_KINDS) {
+    const records = (await rt.raw.state.list(kind)) as unknown as Record<string, unknown>[];
+    for (const record of records) {
+      rules.noStage.checked += 1;
+      const where = stageKeyIn(record);
+      if (where === null) continue;
+      rules.noStage.findings.push({
+        id: String(record['id'] ?? `${kind}:?`),
+        detail: `tl_${kind} carries "${where}"; an application stage lives on the real record and is re-read, never stored`,
+      });
     }
   }
 

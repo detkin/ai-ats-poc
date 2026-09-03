@@ -13,8 +13,17 @@
  * `escalation` is the one non-nudge template: the DM that tells the escalation recipient a
  * `tl_proposed_action` is waiting for them.
  *
- * Public interface: `NUDGE_TEMPLATE_DIR`, `ESCALATION_TEMPLATE_ID`, `templatePath`,
- * `renderTemplate`, `nudgeFacts`, `escalationFacts`, `TemplateFacts`, `NudgeFactTask`.
+ * Two more non-nudge templates live under `templates/packets/` (block B2.2) because they are
+ * loop-2 *artefacts* rather than reminders: `interviewer_brief` is the DM each panellist gets
+ * when the hold is placed — and, because it is sent on the hold's thread, it is also the
+ * thread an interviewer replies to in order to decline or to file a scorecard — and
+ * `panel_change` is the message posted to the summary channel when somebody is swapped out.
+ * `renderTemplate` takes the directory, so a template id can never reach outside these two.
+ *
+ * Public interface: `NUDGE_TEMPLATE_DIR`, `PACKET_TEMPLATE_DIR`, `ESCALATION_TEMPLATE_ID`,
+ * `INTERVIEWER_BRIEF_TEMPLATE_ID`, `PANEL_CHANGE_TEMPLATE_ID`, `templatePath`,
+ * `renderTemplate`, `nudgeFacts`, `escalationFacts`, `interviewerBriefFacts`,
+ * `panelChangeFacts`, `TemplateFacts`, `NudgeFactTask`.
  *
  * An unresolved `{{placeholder}}` is an error, never an empty string: a nudge that says
  * "Hi ," has already failed, and failing loudly in the executor is cheaper than in a DM.
@@ -32,30 +41,45 @@ import { dateOf } from '#lib/engine/index.ts';
 import type { TlCycle, TlTask, TlTaskKind } from '#lib/types/engine.ts';
 import type { Worker } from '#lib/types/tier1.ts';
 
-/** Where the templates live, relative to the repo root. */
+/** Where the nudge templates live, relative to the repo root. */
 export const NUDGE_TEMPLATE_DIR = join('templates', 'nudges');
+/** Where loop 2's non-nudge message templates live, relative to the repo root. */
+export const PACKET_TEMPLATE_DIR = join('templates', 'packets');
 /** The template used for the escalation DM that accompanies an `escalate` proposal. */
 export const ESCALATION_TEMPLATE_ID = 'escalation';
+/** The DM each panellist gets when the hold is placed; also opens the reply thread. */
+export const INTERVIEWER_BRIEF_TEMPLATE_ID = 'interviewer_brief';
+/** The summary-channel post that announces a substitute interviewer. */
+export const PANEL_CHANGE_TEMPLATE_ID = 'panel_change';
 
 /** Facts a template may reference. Every value is a string; missing keys are errors. */
 export type TemplateFacts = Record<string, string>;
 
 const PLACEHOLDER = /\{\{\s*([a-z0-9_]+)\s*\}\}/gi;
 
-/** Absolute path of a template file. */
-export function templatePath(config: Config, templateId: string): string {
+/** Absolute path of a template file, under `dir` (a repo-relative template directory). */
+export function templatePath(
+  config: Config,
+  templateId: string,
+  dir: string = NUDGE_TEMPLATE_DIR,
+): string {
   if (!/^[A-Za-z0-9_.-]+$/.test(templateId)) {
     throw new CliError('BAD_TEMPLATE_ID', `"${templateId}" is not a usable template id`);
   }
-  return join(config.repoRoot, NUDGE_TEMPLATE_DIR, `${templateId}.md`);
+  return join(config.repoRoot, dir, `${templateId}.md`);
 }
 
 /**
- * Read `templates/nudges/<id>.md` and substitute every `{{placeholder}}`.
+ * Read `<dir>/<id>.md` (default `templates/nudges/`) and substitute every `{{placeholder}}`.
  * @throws CliError when the file is missing or a placeholder has no fact.
  */
-export function renderTemplate(config: Config, templateId: string, facts: TemplateFacts): string {
-  const path = templatePath(config, templateId);
+export function renderTemplate(
+  config: Config,
+  templateId: string,
+  facts: TemplateFacts,
+  dir: string = NUDGE_TEMPLATE_DIR,
+): string {
+  const path = templatePath(config, templateId, dir);
   if (!existsSync(path)) {
     throw new CliError(
       'TEMPLATE_NOT_FOUND',
@@ -170,6 +194,69 @@ export function nudgeFacts(input: {
     task_id: tasks.map((entry) => entry.task.id).join(', '),
     task_count: String(tasks.length),
     task_list: taskList(tasks, input.toWorkerId),
+  };
+}
+
+/**
+ * The facts the interviewer brief uses. Everything here is a **record id, a time or the
+ * requisition's own words** — the candidate is never named, never described and never
+ * scored, because a brief that characterised them would be the engine forming a view
+ * (spec §9). The panel is listed by worker id for the same reason attribution matters in
+ * the debrief: the reader needs to know who else is in the room.
+ */
+export function interviewerBriefFacts(input: {
+  recipient: Worker | undefined;
+  toWorkerId: string;
+  cycle: TlCycle;
+  applicationId: string;
+  requisitionId: string;
+  reqTitle: string;
+  criteria: readonly string[];
+  panelIds: readonly string[];
+  startAt: string;
+  endAt: string;
+  scorecardDueAt: string;
+  holdRef: string;
+  summaryChannel: string;
+}): TemplateFacts {
+  return {
+    first_name: callName(input.recipient, input.toWorkerId),
+    cycle_name: input.cycle.name,
+    cycle_id: input.cycle.id,
+    application_id: input.applicationId,
+    requisition_id: input.requisitionId,
+    req_title: input.reqTitle,
+    criteria_list:
+      input.criteria.length === 0
+        ? '- (the requisition lists no criteria)'
+        : input.criteria.map((criterion) => `- ${criterion}`).join('\n'),
+    panel_list: input.panelIds.map((id) => `\`${id}\``).join(', '),
+    start_at: input.startAt,
+    end_at: input.endAt,
+    scorecard_due: input.scorecardDueAt,
+    hold_ref: input.holdRef,
+    summary_channel: input.summaryChannel,
+  };
+}
+
+/**
+ * The facts the panel-change post uses. `summary` is the engine's own sentence, carried
+ * through unchanged; the template only frames it. Evidence is ids, never prose.
+ */
+export function panelChangeFacts(input: {
+  cycle: TlCycle;
+  applicationId: string;
+  summary: string;
+  evidenceRefs: readonly string[];
+  channel: string;
+}): TemplateFacts {
+  return {
+    cycle_name: input.cycle.name,
+    cycle_id: input.cycle.id,
+    application_id: input.applicationId,
+    summary: input.summary,
+    evidence: input.evidenceRefs.map((ref) => `\`${ref}\``).join(', '),
+    channel: input.channel,
   };
 }
 

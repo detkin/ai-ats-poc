@@ -77,6 +77,12 @@ export interface TickResult {
   /** Tasks those reminders covered; one `tl_nudge` each. */
   nudged_tasks: number;
   escalations: number;
+  /** Interview holds placed this tick (loop 2). */
+  holds: number;
+  /** Interviewers swapped for a same-level stand-in this tick (loop 2). */
+  rebooks: number;
+  /** Candidate decisions *proposed* this tick — never executed (spec §9). */
+  proposals: number;
   closed: boolean;
 }
 
@@ -91,8 +97,12 @@ export async function tickCycle(options: {
   const tick = makeTickId(options.cycleId, now);
   const { rt } = openRuntime({ cycleId: options.cycleId, tickId: tick });
 
+  // `observe: true` is the tick's licence to write down what it saw in the world — a
+  // scorecard filed on the interview thread becomes a `submitted` tl_scorecard. Only the
+  // tick has it; every other reader of a snapshot reads.
   const { snapshot, workers } = await buildSnapshot(rt, options.cycleId, now, {
     scan: options.scan,
+    observe: !options.dryRun,
   });
   const plan = planTick(snapshot);
 
@@ -142,6 +152,9 @@ export async function tickCycle(options: {
       0,
     ),
     escalations: plan.actions.filter((action) => action.kind === 'escalate').length,
+    holds: plan.actions.filter((action) => action.kind === 'place_hold').length,
+    rebooks: plan.actions.filter((action) => action.kind === 'rebook').length,
+    proposals: plan.actions.filter((action) => action.kind === 'propose_decision').length,
     closed: plan.actions.some((action) => action.kind === 'close_cycle'),
   };
 }
@@ -177,6 +190,23 @@ function summarize(result: TickResult): string[] {
       `  escalated ${escalation?.task_ids?.length ?? 0} task(s) into proposal ` +
         `${escalation?.record_id ?? '(dry run)'} for ${escalation?.to_worker_id ?? '?'}`,
     );
+  }
+  if (result.holds > 0) {
+    const hold = result.actions.find((action) => action.kind === 'place_hold');
+    lines.push(`  booked    ${hold?.record_id ?? '(dry run)'} — ${hold?.detail ?? ''}`);
+  }
+  if (result.rebooks > 0) {
+    for (const rebook of result.actions.filter((action) => action.kind === 'rebook')) {
+      lines.push(`  rebooked  ${rebook.detail ?? ''}`);
+    }
+  }
+  if (result.proposals > 0) {
+    for (const proposal of result.actions.filter((a) => a.kind === 'propose_decision')) {
+      lines.push(
+        `  proposed  ${proposal.record_id ?? '(dry run)'} — ${proposal.detail ?? ''}. ` +
+          'Nothing moved: a named human decides it.',
+      );
+    }
   }
   if (result.closed) lines.push('  cycle closed');
   return lines;

@@ -420,6 +420,11 @@ describe('verify-loops', () => {
       'references_resolve',
       'cycle_status_canonical',
       'decisions_by_active_worker',
+      // Loop 2's rules run on a review cycle too, and find nothing to check — which is the
+      // point: one verifier, whatever the loop (block B2.2).
+      'interview_slot_held',
+      'scorecard_task_has_submission',
+      'no_stage_in_engine_state',
     ]);
   });
 

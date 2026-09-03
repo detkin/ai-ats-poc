@@ -18,10 +18,19 @@
  * happened to drop a file, and a re-run with the same records would never settle. Noted in
  * `lib/cli/README.md`.
  *
- * Public interface: `PACKET_SPEC`, `runPacket`, `assemblePacket`, `showPacket`,
- * `readPartials`, `stagingDirFor`, `PacketPartial`, `AssembleResult`.
+ * M2 (block B2.2) adds the second engine half: an **interview** cycle assembles
+ * `assembleDebrief` instead — the panel's scorecards, quoted verbatim, each quotation citing
+ * the `tl_scorecard` it came from, the candidate's identifying details stripped, AI
+ * involvement disclosed in the header, and no verdict anywhere. The packet kind follows the
+ * cycle type; there is no flag that crosses them. A scorecard body that tries to instruct the
+ * agent is **not quoted**, and the finding comes back as a `tl_anomaly` this module records —
+ * recorded, never obeyed (spec §9).
  *
- * Spec: docs/SPEC.md §5 (staging), §7 step 2, §10 (faithfulness); docs/PLAN.md §4 block B1.3.
+ * Public interface: `PACKET_SPEC`, `runPacket`, `assemblePacket`, `showPacket`,
+ * `readPartials`, `stagingDirFor`, `parsePacketKind`, `PacketPartial`, `AssembleResult`.
+ *
+ * Spec: docs/SPEC.md §5 (staging), §7 step 2, §8 loop 2, §9, §10 (faithfulness);
+ * docs/PLAN.md §4 block B1.3, §5 block B2.2.
  */
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -33,10 +42,18 @@ import type { Args, CliSpec } from '#lib/cli/args.ts';
 import { ok } from '#lib/cli/output.ts';
 import type { CliOutput } from '#lib/cli/output.ts';
 import { CliError, openRuntime, openRuntimeForRecord } from '#lib/cli/runtime.ts';
-import { calibrationInputsFor, loadCycle } from '#lib/cli/snapshot.ts';
+import { calibrationInputsFor, loadCycle, readWorkers } from '#lib/cli/snapshot.ts';
+import { loadInterviewContext } from '#lib/cli/snapshot-interview.ts';
 import type { Config } from '#lib/config.ts';
-import { assembleCalibration, participantsFor } from '#lib/engine/index.ts';
-import type { TlCitation, TlPacket, TlPacketKind, TlReviewSubmission } from '#lib/types/engine.ts';
+import { assembleCalibration, assembleDebrief, participantsFor } from '#lib/engine/index.ts';
+import type { DebriefAnomaly } from '#lib/engine/index.ts';
+import type {
+  TlAnomaly,
+  TlCitation,
+  TlPacket,
+  TlPacketKind,
+  TlReviewSubmission,
+} from '#lib/types/engine.ts';
 import type { InstantISO } from '#lib/types/tier1.ts';
 
 /** Drop folder for fan-out workers, relative to the repo root. */
@@ -46,7 +63,7 @@ export const PACKET_SPEC: CliSpec = {
   name: 'packet.mjs',
   summary: 'assemble a packet from the engine plus the staging drop folder, or show one',
   usage: [
-    'bin/packet.mjs assemble --cycle <id> --kind calibration [--staging <dir>]',
+    'bin/packet.mjs assemble --cycle <id> --kind calibration|debrief [--staging <dir>]',
     'bin/packet.mjs show --packet <id>',
   ],
   subcommands: [
@@ -55,7 +72,12 @@ export const PACKET_SPEC: CliSpec = {
   ],
   flags: [
     { name: 'cycle', type: 'string', value: '<id>', description: 'cycle to assemble for' },
-    { name: 'kind', type: 'string', value: '<k>', description: 'packet kind (calibration)' },
+    {
+      name: 'kind',
+      type: 'string',
+      value: '<k>',
+      description: 'packet kind: calibration (review cycles) or debrief (interview cycles)',
+    },
     {
       name: 'staging',
       type: 'string',
@@ -85,6 +107,8 @@ export interface AssembleResult {
   staging_dir: string;
   /** True when the engine inputs were unchanged and the body is a re-render. */
   inputs_hash: string;
+  /** `tl_anomaly` records written for scorecard bodies that tried to instruct the agent. */
+  anomalies: TlAnomaly[];
 }
 
 /** `staging/<cycle_id>/` under the repo root, unless the caller names a directory. */
@@ -161,41 +185,67 @@ export function readPartials(dir: string): PacketPartial[] {
   );
 }
 
-/** Validate `--kind`. `debrief` is block B2.2. */
+/** Validate `--kind`. Which one is legal for a given cycle is decided in `assemblePacket`. */
 export function parsePacketKind(raw: string): TlPacketKind {
-  if (raw === 'calibration') return raw;
-  if (raw === 'debrief') {
-    throw new CliError('PACKET_KIND_NOT_YET', 'the debrief packet lands in M2 (block B2.2).');
-  }
+  if (raw === 'calibration' || raw === 'debrief') return raw;
   throw new UsageError(
-    `packet.mjs: --kind "${raw}" is not assemblable here (expected calibration)`,
+    `packet.mjs: --kind "${raw}" is not assemblable here (expected calibration | debrief)`,
   );
+}
+
+/** The one packet kind a cycle of this type can produce. */
+function kindForCycleType(type: string): TlPacketKind | null {
+  if (type === 'review') return 'calibration';
+  if (type === 'interview') return 'debrief';
+  return null;
+}
+
+/** What the engine produced, before the staging partials are merged onto it. */
+interface AssembledBody {
+  body_md: string;
+  citations: TlCitation[];
+  inputs_hash: string;
+  anomalies: DebriefAnomaly[];
 }
 
 /**
  * Assemble and store the packet. Called by `bin/packet.mjs assemble` and by the tick's
  * `refresh_packet` action, so the stored artefact is identical either way.
+ *
+ * The packet kind follows the cycle type: a review cycle assembles a calibration packet and
+ * an interview cycle a debrief. Asking for the other one is a domain failure rather than a
+ * silently empty packet.
  */
 export async function assemblePacket(
   rt: Runtime,
   config: Config,
-  input: { cycleId: string; kind: TlPacketKind; stagingDir?: string; now: InstantISO },
+  input: { cycleId: string; kind?: TlPacketKind; stagingDir?: string; now: InstantISO },
 ): Promise<AssembleResult> {
   const cycle = await loadCycle(rt, input.cycleId);
-  if (cycle.type !== 'review') {
+  const expected = kindForCycleType(cycle.type);
+  const wanted = input.kind ?? expected;
+  if (expected === null || expected !== wanted) {
     throw new CliError(
       'PACKET_KIND_MISMATCH',
-      `cycle ${cycle.id} is a ${cycle.type} cycle; the calibration packet is for review cycles.`,
+      `cycle ${cycle.id} is a ${cycle.type} cycle; it assembles ` +
+        `${expected ?? 'no packet'}, not ${String(wanted)}.`,
     );
   }
 
-  const submissions: TlReviewSubmission[] = await rt.ports.state.list('review_submission', {
-    cycle_id: cycle.id,
-  });
-  const workers = await rt.ports.graph.searchPeople({});
-  const participants = participantsFor(cycle, new Map(workers.map((w) => [w.id, w])));
-  const inputs = await calibrationInputsFor(rt, cycle, participants, submissions, input.now);
-  const assembled = assembleCalibration(inputs);
+  let assembled: AssembledBody;
+  if (expected === 'calibration') {
+    const submissions: TlReviewSubmission[] = await rt.ports.state.list('review_submission', {
+      cycle_id: cycle.id,
+    });
+    const workers = await rt.ports.graph.searchPeople({});
+    const participants = participantsFor(cycle, new Map(workers.map((w) => [w.id, w])));
+    const inputs = await calibrationInputsFor(rt, cycle, participants, submissions, input.now);
+    assembled = { ...assembleCalibration(inputs), anomalies: [] };
+  } else {
+    const workers = await readWorkers(rt);
+    const context = await loadInterviewContext(rt, cycle, workers, input.now);
+    assembled = assembleDebrief({ ...context.debrief, now: input.now });
+  }
 
   const stagingDir = stagingDirFor(config, cycle.id, input.stagingDir);
   const partials = readPartials(stagingDir);
@@ -215,13 +265,41 @@ export async function assemblePacket(
 
   const packet = await rt.ports.state.create('packet', {
     cycle_id: cycle.id,
-    kind: input.kind,
+    kind: expected,
     inputs_hash: assembled.inputs_hash,
     body: `${bodyParts.join('\n')}\n`,
     citations,
   });
 
-  return { packet, partials, staging_dir: stagingDir, inputs_hash: assembled.inputs_hash };
+  // A scorecard that tried to instruct the agent is on record as an anomaly and left out of
+  // the packet. Written after the packet so an assembly that failed leaves no orphan record.
+  const known = new Set(
+    (await rt.ports.state.list('anomaly', { cycle_id: cycle.id })).map(
+      (anomaly) => `${anomaly.source_ref}|${anomaly.rule}`,
+    ),
+  );
+  const anomalies: TlAnomaly[] = [];
+  for (const finding of assembled.anomalies) {
+    if (known.has(`${finding.source_ref}|${finding.rule}`)) continue;
+    known.add(`${finding.source_ref}|${finding.rule}`);
+    anomalies.push(
+      await rt.ports.state.create('anomaly', {
+        cycle_id: cycle.id,
+        ts: input.now,
+        source_ref: finding.source_ref,
+        excerpt: finding.excerpt,
+        rule: finding.rule,
+      }),
+    );
+  }
+
+  return {
+    packet,
+    partials,
+    staging_dir: stagingDir,
+    inputs_hash: assembled.inputs_hash,
+    anomalies,
+  };
 }
 
 /** Read one stored packet. */
@@ -245,13 +323,13 @@ export async function runPacket(args: Args): Promise<CliOutput> {
   }
 
   const cycleId = args.require('cycle');
-  const kind = parsePacketKind(args.get('kind') ?? 'calibration');
+  const rawKind = args.get('kind');
   const { rt, config, now } = openRuntime({ cycleId });
   const staging = args.get('staging');
   const result = await assemblePacket(rt, config, {
     cycleId,
-    kind,
     now,
+    ...(rawKind === undefined ? {} : { kind: parsePacketKind(rawKind) }),
     ...(staging === undefined ? {} : { stagingDir: staging }),
   });
 
@@ -265,11 +343,18 @@ export async function runPacket(args: Args): Promise<CliOutput> {
       partials: result.partials.map((partial) => partial.section_id),
       staging_dir: result.staging_dir,
       bytes: result.packet.body.length,
+      anomalies: result.anomalies.map((anomaly) => anomaly.id),
     },
     [
       `Assembled ${result.packet.kind} packet ${result.packet.id} for ${result.packet.cycle_id}.`,
       `  inputs_hash  ${result.packet.inputs_hash}`,
       `  citations    ${result.packet.citations.length}`,
+      ...(result.anomalies.length === 0
+        ? []
+        : [
+            `  anomalies    ${result.anomalies.length} scorecard(s) withheld: ` +
+              result.anomalies.map((anomaly) => anomaly.id).join(', '),
+          ]),
       `  partials     ${result.partials.length}${
         result.partials.length === 0
           ? ` (none in ${result.staging_dir})`
