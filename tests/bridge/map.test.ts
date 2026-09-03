@@ -26,6 +26,7 @@ import {
   mapSnapshot,
   validateSnapshot,
 } from '#lib/adapters/bridge/index.ts';
+import { FixtureAvailabilityAdapter } from '#lib/adapters/fixture/availability.ts';
 import { loadPolicy } from '#lib/policy/index.ts';
 import { sampleSnapshot as sample } from '#tests/bridge/helpers.ts';
 
@@ -169,8 +170,77 @@ describe('locations', () => {
   it('invents loc_unassigned for a person with no location, and warns', () => {
     expect(workerOf('w_cs1')?.location_id).toBe(UNASSIGNED_LOCATION_ID);
     const unassigned = mapped.bundle.locations.find((l) => l.id === UNASSIGNED_LOCATION_ID);
-    expect(unassigned?.timezone).toBe('America/New_York');
-    expect(mapped.warnings.join('\n')).toContain('no work location');
+    // Not voted from the people parked in it: it is a parking spot, not a place. Their own
+    // Worker.timezone is what quiet hours read (D27).
+    expect(unassigned?.timezone).toBe(POLICY.quiet_hours.default_timezone);
+    expect(workerOf('w_cs1')?.timezone).toBe('America/New_York');
+    const warning = mapped.warnings.find((line) => line.includes('no work location'));
+    expect(warning).toContain('Worker.timezone');
+  });
+
+  it('summarises empty offices in one warning instead of one line each', () => {
+    const snapshot = sample();
+    for (const id of ['loc_tokyo', 'loc_lisbon', 'loc_oslo']) {
+      snapshot.locations.results.push({
+        id,
+        name: id,
+        address: {
+          type: 'WORK',
+          formatted: `1 Test Way, ${id}`,
+          street_address: '1 Test Way',
+          locality: id,
+          region: null,
+          postal_code: '00000',
+          country: 'JP',
+        },
+        redacted_fields: [],
+      });
+    }
+    const result = mapSnapshot(snapshot, POLICY, NOW);
+    const lines = result.warnings.filter((line) => line.includes('no timezone could be derived'));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('loc_tokyo, loc_lisbon, loc_oslo');
+    for (const id of ['loc_tokyo', 'loc_lisbon', 'loc_oslo']) {
+      expect(result.bundle.locations.find((l) => l.id === id)?.timezone).toBe(
+        POLICY.quiet_hours.default_timezone,
+      );
+    }
+  });
+
+  it('says nothing at all when every office has somebody in it', () => {
+    expect(mapped.warnings.some((line) => line.includes('no timezone could be derived'))).toBe(
+      false,
+    );
+  });
+});
+
+/**
+ * The mapping is only half the fix: what matters is that the adapter reading the mapped bundle
+ * asks the *person's* clock. `w_cs1` is the snapshot's REMOTE person — no work location, so
+ * `loc_unassigned` at the policy default (America/Los_Angeles), and a profile that says
+ * America/New_York.
+ */
+describe('quiet hours over a bridged bundle', () => {
+  const availability = new FixtureAvailabilityAdapter(mapped.bundle, POLICY);
+  const REMOTE = 'w_cs1';
+
+  it('is nudgeable at 10:00 in their own timezone, though their location says 07:00', async () => {
+    const answer = await availability.quietHours(REMOTE, '2026-09-02T14:00:00Z');
+    expect(answer.quiet).toBe(false);
+    // Everyone the mapper put in Los Angeles is still asleep at that instant.
+    expect((await availability.quietHours('w_ceo', '2026-09-02T14:00:00Z')).quiet).toBe(true);
+  });
+
+  it('is quiet at 01:00 in their own timezone', async () => {
+    const answer = await availability.quietHours(REMOTE, '2026-09-02T05:00:00Z');
+    expect(answer.quiet).toBe(true);
+    expect(answer.reason).toContain('America/New_York');
+  });
+
+  it('reads the Berlin people in Berlin', async () => {
+    // 16:30 Berlin, 07:30 Los Angeles: working there, quiet at the policy default zone.
+    expect((await availability.quietHours('w_plat1', '2026-09-02T14:30:00Z')).quiet).toBe(false);
+    expect((await availability.quietHours('w_ceo', '2026-09-02T14:30:00Z')).quiet).toBe(true);
   });
 });
 

@@ -8,10 +8,11 @@
  *   import → cycle create (all departments) → open → tick → tick again → audit → verify →
  *   packet assemble
  *
- * and the four things that must hold on real people hold here too: the person Rippling says
- * is on leave gets a moved due date and no message, the second tick is a no-op, every ledger
- * line says `adapter: bridge`, and the calibration packet states — rather than fabricates —
- * that compensation was not available.
+ * and the five things that must hold on real people hold here too: the person Rippling says
+ * is on leave gets a moved due date and no message, the person Rippling reports as REMOTE is
+ * reached in their *own* timezone rather than the one their placeholder location carries, the
+ * second tick is a no-op, every ledger line says `adapter: bridge`, and the calibration packet
+ * states — rather than fabricates — that compensation was not available.
  *
  * `TL_NOW` is frozen for the test (docs/DECISIONS.md D8); the real run in `modes/live-run.md`
  * deliberately uses the wall clock instead.
@@ -34,10 +35,24 @@ import { readLedger, readOutbox, readState, runCli, runJson } from '#tests/cli/h
 
 /** The person `tests/bridge/sample-snapshot.json` puts on vacation until 2026-09-03. */
 const ON_LEAVE = 'w_eng2';
+/**
+ * The snapshot's REMOTE person: `location: null`, so the mapper parks them in
+ * `loc_unassigned`, whose timezone is the tenant default (America/Los_Angeles). Their Rippling
+ * profile says America/New_York, and that is the clock the tick has to keep.
+ */
+const REMOTE = 'w_cs1';
+/** Everybody the snapshot puts on America/Los_Angeles — `loc_unassigned`'s zone. */
+const PACIFIC = ['w_ceo', 'w_cto', 'w_eng1', 'w_cs2', 'w_fin1'];
 /** The acting user in the snapshot: `lookup_me` is the root of the org walk. */
 const ACTOR = 'w_ceo';
 const OPEN_AT = '2026-08-24T16:00:00Z';
-const TICK_AT = '2026-09-02T16:00:00Z';
+/**
+ * Wednesday 09:30 in New York — and 06:30 in Los Angeles, so every Pacific person is inside
+ * quiet hours while the remote person is not. ("Working hours *only* in New York" is not
+ * expressible on this tenant: Berlin's window, 07:00–16:00Z, and Pacific's, 16:00–01:00Z, tile
+ * New York's exactly, so 15:30 in Berlin is awake here too.)
+ */
+const TICK_AT = '2026-09-02T13:30:00Z';
 
 let dataDir: string;
 let cycleId: string;
@@ -162,6 +177,22 @@ describe('3. tick', () => {
       .map((line) => line.to_worker_id);
     expect(recipients.length).toBeGreaterThan(0);
     expect(new Set(recipients).size).toBe(recipients.length);
+  });
+
+  /**
+   * The timezone claim, at tick level: quiet hours are read from `Worker.timezone`, so the
+   * REMOTE person is reachable at 09:30 their time even though the placeholder location they
+   * are filed under says 06:30. Decided the old, location-first way, this tick would have sent
+   * them nothing and this assertion would fail.
+   */
+  it('nudges the remote person in their own morning, and no Pacific person at all', () => {
+    const recipients = new Set(
+      readOutbox(dataDir)
+        .filter((line) => line.template_id.startsWith('nudge.'))
+        .map((line) => line.to_worker_id),
+    );
+    expect(recipients.has(REMOTE)).toBe(true);
+    for (const workerId of PACIFIC) expect(recipients.has(workerId)).toBe(false);
   });
 
   it('is a no-op the second time at the same instant', async () => {

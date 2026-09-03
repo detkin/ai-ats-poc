@@ -10,8 +10,11 @@
  * (docs/testing/live-rippling.md, docs/DECISIONS.md D27) are all resolved here:
  *
  *  1. **Timezone is on the person, not the location.** `Worker.timezone` comes from the
- *     profile; `Location.timezone` is the most common timezone of the people at that
- *     location, falling back to `quiet_hours.default_timezone`.
+ *     profile and is what quiet hours actually read (`fixture/availability.ts`);
+ *     `Location.timezone` is the most common timezone of the people at that location, falling
+ *     back to `quiet_hours.default_timezone`. The synthetic `loc_unassigned` always takes the
+ *     default: it is where REMOTE people are parked, not a place, so voting a zone for it
+ *     would only invent an office none of them work in.
  *  2. **Locations have no work hours.** Every `Location.work_hours` is
  *     `quiet_hours.default_work_hours`.
  *  3. **Departments nest.** `parent_id` is kept as `Department.parent_department_id`.
@@ -243,6 +246,8 @@ function mapLocations(ctx: Ctx, people: readonly McpPerson[]): Location[] {
   });
   const workHours = { ...ctx.policy.quiet_hours.default_work_hours };
   const fallbackZone = ctx.policy.quiet_hours.default_timezone;
+  /** Offices with nobody filed at them. One line about all of them, not one line each. */
+  const empty: string[] = [];
 
   const zoneFor = (locationId: string): string => {
     const zones = people
@@ -251,9 +256,7 @@ function mapLocations(ctx: Ctx, people: readonly McpPerson[]): Location[] {
       .filter((zone): zone is string => typeof zone === 'string' && zone.length > 0);
     const voted = mode(zones);
     if (voted === null) {
-      ctx.warnings.push(
-        `location ${locationId} has no worker timezone to derive from; using quiet_hours.default_timezone (${fallbackZone})`,
-      );
+      empty.push(locationId);
       return fallbackZone;
     }
     return voted;
@@ -275,15 +278,28 @@ function mapLocations(ctx: Ctx, people: readonly McpPerson[]): Location[] {
     };
   });
 
+  if (empty.length > 0) {
+    ctx.warnings.push(
+      `${empty.length} work location(s) have nobody filed at them, so no timezone could be ` +
+        `derived (${empty.join(', ')}); each records quiet_hours.default_timezone ` +
+        `(${fallbackZone}). Nobody works there, so nothing is decided from it.`,
+    );
+  }
+
   if (needsUnassigned) {
     ctx.warnings.push(
-      `some people have no work location on their profile; they are placed in ${UNASSIGNED_LOCATION_ID}`,
+      `some people have no work location on their profile (Rippling reports them REMOTE); they ` +
+        `are placed in ${UNASSIGNED_LOCATION_ID}, which carries quiet_hours.default_timezone ` +
+        `(${fallbackZone}) and default_work_hours. Their quiet hours are computed in their own ` +
+        `Worker.timezone, not in this location's.`,
     );
     locations.push({
       id: UNASSIGNED_LOCATION_ID,
       name: 'Unassigned',
       country: 'UNKNOWN',
-      timezone: zoneFor(UNASSIGNED_LOCATION_ID),
+      // Not voted: this is a parking spot, not a place. `Worker.timezone` governs the people
+      // in it (lib/adapters/fixture/availability.ts, D27).
+      timezone: fallbackZone,
       work_hours: workHours,
       location_group: 'UNKNOWN',
     });

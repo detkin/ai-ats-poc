@@ -7,14 +7,26 @@
  * they are quiet hours, which is a different question with a different answer (a due date is
  * not moved because Saturday exists).
  *
- * Quiet hours are computed in the worker's *location* timezone with `Intl.DateTimeFormat`
- * (no dependency, no hand-rolled offset table), gated by `tenant/policy.yml quiet_hours`.
+ * Quiet hours are computed with `Intl.DateTimeFormat` (no dependency, no hand-rolled offset
+ * table), gated by `tenant/policy.yml quiet_hours`. Three resolutions, three different rules —
+ * this is the precedence the rest of the system relies on (docs/DECISIONS.md D27):
+ *
+ *  - **Timezone: the person wins.** `Worker.timezone` when it is set and `Intl` accepts it,
+ *    else `Location.timezone`, else `quiet_hours.default_timezone`. Rippling carries the zone
+ *    on the profile, not on the work location, and a remote worker's location is a synthetic
+ *    placeholder standing in the tenant's default zone — deciding from it would mean somebody
+ *    in Ljubljana could only ever be nudged during California office hours. An unparseable
+ *    `Worker.timezone` simply falls through to the next source; nothing else happens.
+ *  - **Work hours: the location wins,** because hours are a property of the office, not of the
+ *    person. `quiet_hours.default_work_hours` fills in when the location carries none or is
+ *    the synthetic `loc_unassigned` (the bridge's parking spot for REMOTE people).
+ *  - **Holidays: the location wins,** for the same reason; `loc_unassigned` has none.
  *
  * `findFreeSlots` / `placeHold` are M2 (Google Calendar composition, block B2.1) and throw
  * `NotImplementedYetError` rather than returning a plausible lie.
  *
  * Public interface: `FixtureAvailabilityAdapter` (implements `AvailabilityPort`),
- * `NotImplementedYetError`, `localParts`, `LocalParts`.
+ * `NotImplementedYetError`, `localParts`, `LocalParts`, `isValidTimeZone`.
  *
  * Rippling calls this stands in for: codemode.lookup_absence, codemode.search_leave_types,
  * codemode.search_work_locations | REST GET /leave-requests, /leave-types, /work-locations.
@@ -22,6 +34,7 @@
  * Spec: docs/SPEC.md §4, §7 step 1, §8 loop 1; docs/PLAN.md §2.3.
  */
 
+import { UNASSIGNED_LOCATION_ID } from '#lib/adapters/bridge/map.ts';
 import type { TenantBundle } from '#lib/fixtures/index.ts';
 import type { TenantPolicy } from '#lib/policy/index.ts';
 import type {
@@ -34,7 +47,15 @@ import type {
   SlotQuery,
 } from '#lib/ports/availability.ts';
 import { TalentLoopsError } from '#lib/safety/errors.ts';
-import type { Absence, DateISO, InstantISO, Location, WorkerId } from '#lib/types/tier1.ts';
+import type {
+  Absence,
+  DateISO,
+  InstantISO,
+  Location,
+  WorkHours,
+  Worker,
+  WorkerId,
+} from '#lib/types/tier1.ts';
 
 /** A port method that exists in the contract but lands in a later milestone. */
 export class NotImplementedYetError extends TalentLoopsError {
@@ -95,6 +116,27 @@ export function localParts(instant: Date, timeZone: string): LocalParts {
   };
 }
 
+/**
+ * `true` when `Intl` recognises `zone` as an IANA timezone. A profile carrying junk must fall
+ * through to the next source rather than throw a `RangeError` deep inside a tick.
+ */
+export function isValidTimeZone(zone: string | undefined | null): zone is string {
+  if (typeof zone !== 'string' || zone.length === 0) return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** `HH:MM`, 24-hour. A location with a blank or malformed value carries no hours at all. */
+function isWorkHours(hours: WorkHours | undefined): hours is WorkHours {
+  const shaped = (value: string | undefined): boolean =>
+    typeof value === 'string' && /^\d{1,2}:\d{2}$/.test(value);
+  return hours !== undefined && shaped(hours.start) && shaped(hours.end);
+}
+
 /** `HH:MM` → minutes since midnight; `NaN`-safe (a bad value never silences a nudge). */
 function toMinutes(hhmm: string, fallback: number): number {
   const match = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
@@ -116,7 +158,8 @@ export class FixtureAvailabilityAdapter implements AvailabilityPort {
     this.policy = policy;
   }
 
-  private locationOf(workerId: WorkerId): Location {
+  /** The worker and the location they are filed under — both, or a named error. */
+  private placeOf(workerId: WorkerId): { worker: Worker; location: Location } {
     const worker = this.bundle.workers.find((w) => w.id === workerId);
     if (worker === undefined) {
       throw new TalentLoopsError('WORKER_NOT_FOUND', `no worker "${workerId}" in the fixtures`);
@@ -128,7 +171,34 @@ export class FixtureAvailabilityAdapter implements AvailabilityPort {
         `worker "${workerId}" points at unknown location "${worker.location_id}"`,
       );
     }
-    return location;
+    return { worker, location };
+  }
+
+  private locationOf(workerId: WorkerId): Location {
+    return this.placeOf(workerId).location;
+  }
+
+  /**
+   * Timezone precedence: the person, then their location, then the tenant default. See the
+   * file header — on a bridged tenant the location is often a placeholder and the profile is
+   * the only true answer.
+   */
+  private zoneOf(worker: Worker, location: Location): string {
+    if (isValidTimeZone(worker.timezone)) return worker.timezone;
+    if (isValidTimeZone(location.timezone)) return location.timezone;
+    return this.policy.quiet_hours.default_timezone;
+  }
+
+  /**
+   * Work hours come from the location, because they describe an office. `loc_unassigned` is
+   * not an office — it is where the bridge parks people Rippling marks REMOTE — so it, and any
+   * location with no usable hours, falls back to `quiet_hours.default_work_hours`.
+   */
+  private hoursOf(location: Location): WorkHours {
+    if (location.id !== UNASSIGNED_LOCATION_ID && isWorkHours(location.work_hours)) {
+      return location.work_hours;
+    }
+    return this.policy.quiet_hours.default_work_hours;
   }
 
   private leaveTypeName(leaveTypeId: string): string {
@@ -179,17 +249,20 @@ export class FixtureAvailabilityAdapter implements AvailabilityPort {
   }
 
   /**
-   * Quiet when the local time is outside the location's work hours, on a weekend, or on a
-   * local holiday — each gated by its `tenant/policy.yml quiet_hours` flag. A worker who is
-   * on leave is *absent*, which is a stronger answer; ask `absenceOn` for that.
+   * Quiet when the time *where the person is* falls outside their work hours, on a weekend, or
+   * on a holiday at their location — each gated by its `tenant/policy.yml quiet_hours` flag.
+   * The clock is read in the worker's own timezone (see the file header for the precedence);
+   * the hours and the holiday calendar are the location's. A worker who is on leave is
+   * *absent*, which is a stronger answer; ask `absenceOn` for that.
    */
   async quietHours(workerId: WorkerId, instantISO: InstantISO): Promise<QuietHoursAnswer> {
-    const location = this.locationOf(workerId);
+    const { worker, location } = this.placeOf(workerId);
     const instant = new Date(instantISO);
     if (Number.isNaN(instant.getTime())) {
       throw new TalentLoopsError('BAD_INSTANT', `"${instantISO}" is not a valid instant`);
     }
-    const local = localParts(instant, location.timezone);
+    const zone = this.zoneOf(worker, location);
+    const local = localParts(instant, zone);
     const quiet = this.policy.quiet_hours;
 
     if (quiet.holidays) {
@@ -202,18 +275,19 @@ export class FixtureAvailabilityAdapter implements AvailabilityPort {
     }
 
     if (quiet.weekends && (local.weekday === 0 || local.weekday === 6)) {
-      return { quiet: true, reason: `weekend at ${location.name} (${local.date})` };
+      return { quiet: true, reason: `weekend in ${zone} (${local.date})` };
     }
 
     if (quiet.respect_location_hours) {
-      const start = toMinutes(location.work_hours.start, 0);
-      const end = toMinutes(location.work_hours.end, 24 * 60);
+      const hours = this.hoursOf(location);
+      const start = toMinutes(hours.start, 0);
+      const end = toMinutes(hours.end, 24 * 60);
       if (local.minutes < start || local.minutes >= end) {
         return {
           quiet: true,
           reason:
-            `outside ${location.work_hours.start}–${location.work_hours.end} ` +
-            `${location.timezone} (local ${local.date} ${String(Math.floor(local.minutes / 60)).padStart(2, '0')}:${String(local.minutes % 60).padStart(2, '0')})`,
+            `outside ${hours.start}–${hours.end} ` +
+            `${zone} (local ${local.date} ${String(Math.floor(local.minutes / 60)).padStart(2, '0')}:${String(local.minutes % 60).padStart(2, '0')})`,
         };
       }
     }

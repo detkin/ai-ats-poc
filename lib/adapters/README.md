@@ -57,7 +57,15 @@ Rules the fixture adapters enforce so no caller has to:
   `templates/loop-states.yml`; an undeclared transition throws `LoopStatesError`.
 - **Absence beats everything.** An APPROVED absence or a location holiday means absent
   (`absenceOn`); a PENDING absence does not. Weekends are quiet hours, not absence.
-- **Quiet hours** are computed in the worker's _location_ timezone with `Intl.DateTimeFormat`.
+- **Quiet hours** are computed with `Intl.DateTimeFormat`, and the three inputs do not come
+  from the same place:
+  - _timezone_ — `Worker.timezone` when `Intl` accepts it, else `Location.timezone`, else
+    `quiet_hours.default_timezone`. Rippling puts the zone on the profile, and a remote
+    worker's location is a placeholder (`loc_unassigned`), so deciding from the location would
+    confine somebody in Ljubljana to California office hours (D27).
+  - _work hours_ — the location's, because hours describe an office;
+    `quiet_hours.default_work_hours` fills in for `loc_unassigned` or a location with none.
+  - _holidays_ — the location's calendar; `loc_unassigned` has none.
 - **M2 methods** (`findFreeSlots`, `placeHold`) throw `NotImplementedYetError`, never a fake.
 
 ## What a ledger line looks like
