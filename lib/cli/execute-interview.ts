@@ -23,18 +23,13 @@
  *                     interviewer's `attend_interview` / `submit_scorecard` tasks, and on
  *                     their still-pending `tl_scorecard` — the stand-in inherits the work,
  *                     and the record the work completes has to follow them or the task could
- *                     never close (see "Engine gap" below)
+ *                     never close. Which rows move is `movesOnRebook` / `rekeysOnRebook` in
+ *                     `lib/engine/interview-loop.ts`, so the reference fold and this executor
+ *                     cannot drift apart (docs/DECISIONS.md D23)
  *   post_change       channel.postChannel to `policy.channels.summary_channel`
  *   propose_decision  createProposal — the same function `bin/propose.mjs` uses, and the only
  *                     way `advance_stage` or `reject` can enter the system (spec §9). There is
  *                     no stage write anywhere in this file, and there is no port that offers one.
- *
- * **Engine gap (reported to the orchestrator).** `applyPlan`'s `rebook` moves the declining
- * interviewer's *tasks* to the substitute but leaves their pending `tl_scorecard` keyed to
- * the person who dropped out. `detect` matches a `submit_scorecard` task to a scorecard on
- * `application|interviewer`, so without the re-key the stand-in's task can never complete and
- * the debrief packet would quote a panellist who never interviewed. This file re-keys it; the
- * pure fold should grow the same line.
  *
  * Spec: docs/SPEC.md §4, §6, §7 step 2, §8 loop 2, §9; docs/PLAN.md §5 block B2.2.
  */
@@ -53,7 +48,13 @@ import {
   renderTemplate,
 } from '#lib/cli/templates.ts';
 import type { Config } from '#lib/config.ts';
-import { interviewSlotFor, interviewTasksFor, scorecardsFor } from '#lib/engine/index.ts';
+import {
+  interviewSlotFor,
+  interviewTasksFor,
+  movesOnRebook,
+  rekeysOnRebook,
+  scorecardsFor,
+} from '#lib/engine/index.ts';
 import type {
   PlannedPlaceHold,
   PlannedPostChange,
@@ -63,9 +64,6 @@ import type {
 } from '#lib/engine/index.ts';
 import type { TlCycle, TlScorecard, TlTask } from '#lib/types/engine.ts';
 import type { Worker, WorkerId } from '#lib/types/tier1.ts';
-
-/** Task kinds a rebooked interviewer hands over. */
-const INTERVIEW_TASK_KINDS = new Set<TlTask['kind']>(['attend_interview', 'submit_scorecard']);
 
 /** What every loop-2 executor needs from the tick that is running it. */
 export interface InterviewExecuteContext {
@@ -208,9 +206,7 @@ export async function executeRebook(
 
   const moved: string[] = [];
   for (const task of [...tasks.values()]) {
-    if (task.participant_worker_id !== action.declined_worker_id) continue;
-    if (task.external_ref !== slot.application_id) continue;
-    if (!INTERVIEW_TASK_KINDS.has(task.kind)) continue;
+    if (!movesOnRebook(task, slot.application_id, action.declined_worker_id)) continue;
     const next = await rt.ports.state.update('task', task.id, {
       participant_worker_id: action.substitute_worker_id,
     });
@@ -218,13 +214,11 @@ export async function executeRebook(
     moved.push(next.id);
   }
 
-  // The record that completes the moved scorecard task has to follow the person who now owes
-  // it — see the "Engine gap" note in this file's header.
+  // The record that completes the moved scorecard task follows the person who now owes it —
+  // the same rule `applyPlan` applies to the pure snapshot (docs/DECISIONS.md D23).
   let rekeyed = 0;
   for (const card of snapshot.scorecards ?? []) {
-    if (card.application_id !== slot.application_id) continue;
-    if (card.interviewer_worker_id !== action.declined_worker_id) continue;
-    if (card.status !== 'pending') continue;
+    if (!rekeysOnRebook(card, slot.application_id, action.declined_worker_id)) continue;
     await rt.ports.state.update('scorecard', card.id, {
       interviewer_worker_id: action.substitute_worker_id,
     });

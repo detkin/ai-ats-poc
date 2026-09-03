@@ -4,9 +4,11 @@
  * Owns: `planInterviewTick`, which runs **after** the generic rules in `plan.ts` and adds
  * the four things a review cycle never needs: book the panel, re-book on a decline, refresh
  * the debrief packet, and *propose* the stage decision. Everything else — detecting overdue
- * work, chasing scorecards with nudges, batching per recipient, respecting absence and quiet
- * hours, capping attempts, escalating, closing — is loop 1's code, untouched. That reuse is
- * the whole argument of spec §1 claim 1, so this file is deliberately small.
+ * work, completing tasks the record proves are done, chasing scorecards with nudges, batching
+ * per recipient, respecting absence and quiet hours, capping attempts, escalating, closing —
+ * is loop 1's code, untouched. That reuse is the whole argument of spec §1 claim 1, so this
+ * file is deliberately small, and block B2.3 made it smaller: completing an attendance task
+ * once the slot has ended is a *generic* completion rule in `detect.ts`, not a beat here.
  *
  * Public interface:
  *   planInterviewTick(snapshot, detected?) -> PlannedAction[]
@@ -15,10 +17,11 @@
  * The rules, in order:
  *   i.   no slot on record → `place_hold` for `panelFor(...)` at `chooseSlot(snapshot.slots)`;
  *   ii.  a decline against the current slot → `rebook` with `substituteFor(...)` plus one
- *        `post_change` to the summary channel; no substitute at that rank → `escalate`;
- *   iii. the slot has ended → `complete_task` for the `attend_interview` tasks it evidences;
- *   iv.  every scorecard in and the debrief inputs moved → `refresh_packet` kind `debrief`;
- *   v.   the debrief packet on record is current → **one** `propose_decision`.
+ *        `post_change` to the summary channel; no substitute at that rank → `escalate`.
+ *        Nobody who has declined *this* slot can be its stand-in, however many declines the
+ *        tick is working through (docs/DECISIONS.md D23);
+ *   iii. every scorecard in and the debrief inputs moved → `refresh_packet` kind `debrief`;
+ *   iv.  the debrief packet on record is current → **one** `propose_decision`.
  *
  * What is not here, on purpose:
  *  - **No `advance_stage`, no `reject`.** A candidate decision leaves the engine only as a
@@ -26,6 +29,10 @@
  *    such member and `tests/engine/interview-plan.test.ts` asserts it never gains one.
  *  - **No `request_scorecard`.** Chasing is the ordinary nudge over an overdue
  *    `submit_scorecard` task, so scorecard chase inherits loop 1's cadence and gates for free.
+ *  - **No attendance rule.** The held slot is the evidence that the panel sat, and `detect`
+ *    reads it under the same "has the completing record appeared?" rule that closes a review
+ *    submission or a scorecard. Attendance is never nudged (D23), so there is nothing here to
+ *    race against.
  *  - **No calendar call.** Candidate slots arrive on the snapshot, already filtered by the
  *    composed Availability port with Rippling absence in front (spec §4).
  *
@@ -38,7 +45,6 @@
 
 import { detect } from '#lib/engine/detect.ts';
 import { chooseSlot, panelFor, substituteFor } from '#lib/engine/interview-loop.ts';
-import { parseInstant } from '#lib/engine/time.ts';
 import type { DetectSummary, PlannedAction, TickSnapshot } from '#lib/engine/snapshot.ts';
 import type { TlInterviewSlot, TlProposedAction } from '#lib/types/engine.ts';
 import type { Worker, WorkerId } from '#lib/types/tier1.ts';
@@ -109,11 +115,16 @@ export function planInterviewTick(
   }
 
   /* (ii) Somebody said no. Re-staff the same slot, or ask a human. */
-  const declines = [...(snapshot.declines ?? [])]
-    .filter(
-      (decline) =>
-        decline.slot_id === active.id && active.interviewer_worker_ids.includes(decline.worker_id),
-    )
+  const slotDeclines = (snapshot.declines ?? []).filter((decline) => decline.slot_id === active.id);
+  /**
+   * Everybody who has ever said no to *this* slot. They stay excluded from substitution for
+   * it even after they have been swapped off the panel: a second decline that re-picked the
+   * first decliner would book somebody who has already said they cannot make the time
+   * (docs/DECISIONS.md D23).
+   */
+  const declinedIds = new Set<WorkerId>(slotDeclines.map((decline) => decline.worker_id));
+  const declines = [...slotDeclines]
+    .filter((decline) => active.interviewer_worker_ids.includes(decline.worker_id))
     .sort((a, b) => (a.worker_id < b.worker_id ? -1 : a.worker_id > b.worker_id ? 1 : 0));
 
   /** The panel as this tick is leaving it — a second decline cannot pick the same stand-in. */
@@ -122,17 +133,13 @@ export function planInterviewTick(
   for (const decline of declines) {
     const declined = workers.get(decline.worker_id);
     if (declined === undefined) continue;
-    const panelWorkers = panelIds
+    // `substituteFor` excludes everyone it is handed, so the exclusion set is the live panel
+    // plus every decliner of this slot.
+    const excluded = [...new Set<WorkerId>([...panelIds, ...declinedIds])]
       .map((id) => workers.get(id))
       .filter((worker): worker is Worker => worker !== undefined);
 
-    const substitute = substituteFor(
-      declined,
-      panelWorkers,
-      workers,
-      levels,
-      snapshot.availability,
-    );
+    const substitute = substituteFor(declined, excluded, workers, levels, snapshot.availability);
 
     if (substitute === null) {
       // No same-rank peer is free. A thinner panel is a judgement call, so a human makes it.
@@ -178,22 +185,7 @@ export function planInterviewTick(
     });
   }
 
-  /* (iii) The slot has been and gone: attendance is on record in the slot itself. */
-  if (parseInstant(snapshot.now) >= parseInstant(active.end_at) && active.hold_ref !== null) {
-    for (const signal of detected.signals) {
-      if (signal.terminal || signal.kind !== 'attend_interview') continue;
-      if (signal.subject_worker_id !== application.id) continue;
-      if (!panelIds.includes(signal.participant_worker_id)) continue;
-      actions.push({
-        kind: 'complete_task',
-        task_id: signal.task_id,
-        submission_id: active.id,
-        evidence_refs: [signal.task_id, active.id],
-      });
-    }
-  }
-
-  /* (iv)/(v) The write-ups are in: assemble the debrief, then propose the decision. */
+  /* (iii)/(iv) The write-ups are in: assemble the debrief, then propose the decision. */
   const scorecardSignals = detected.signals.filter(
     (signal) => signal.kind === 'submit_scorecard' && signal.subject_worker_id === application.id,
   );

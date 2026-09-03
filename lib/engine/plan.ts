@@ -20,8 +20,10 @@
  *      date also moves once, to `until + policy.absence.move_due_date_days_after_return`
  *      days. A public holiday (`absent_source: 'holiday'`) silences the day and moves
  *      nothing;
- *   d. overdue, present, audible, gap elapsed, attempts left → `nudge`, and the tick emits
- *      **one** `nudge` action per recipient bundling all of their eligible tasks (D17);
+ *   d. overdue, present, audible, gap elapsed, attempts left, and of a kind that may be
+ *      chased at all → `nudge`, and the tick emits **one** `nudge` action per recipient
+ *      bundling all of their eligible tasks (D17). `attend_interview` is never chased: the
+ *      slot completes it by observation under rule (b) (D23);
  *   e. overdue past `after_attempts` or `overdue_days` → **one** `escalate` for the whole
  *      cycle, bundling every offender with evidence (spec §8: one escalation, not forty);
  *   f. running + an outstanding escalation → `escalated`; escalated + none → `running`;
@@ -41,6 +43,7 @@
 
 import { detect } from '#lib/engine/detect.ts';
 import { sha256Hex } from '#lib/engine/hash.ts';
+import { isNudgeableKind } from '#lib/engine/interview-loop.ts';
 import { mergeInterviewActions, planInterviewTick } from '#lib/engine/interview-plan.ts';
 import { addDays, endOfDay, parseInstant } from '#lib/engine/time.ts';
 import { assertTransition } from '#lib/states/index.ts';
@@ -95,6 +98,9 @@ export function policyCheckFor(signal: TaskSignal): TlNudgePolicyCheck {
   if (signal.attempts_left <= 0) reasons.push('max_attempts_reached');
   if (!signal.nudge_gap_ok) reasons.push('nudge_gap_not_elapsed');
   if (signal.terminal) reasons.push('task_terminal');
+  // Attendance is observed, not asked for (docs/DECISIONS.md D23). Refusing it here rather
+  // than in the tick loop means `bin/nudge.mjs` refuses it too, with the reason on record.
+  if (!isNudgeableKind(signal.kind)) reasons.push('task_never_nudged');
 
   return {
     recipient_in_cycle: signal.recipient_in_cycle,

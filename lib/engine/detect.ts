@@ -17,6 +17,13 @@
  * is the id of whichever shadow record completed the task — a review submission or a
  * scorecard — and `plan.ts` rule (b) is unchanged.
  *
+ * Block B2.3 widens it once more, on the same principle: an `attend_interview` task is
+ * completed by the **held slot itself**, once the hour has been and gone
+ * (`attendanceEvidenceFor`). Completion by observation is the whole rule — attendance is
+ * never nudged (docs/DECISIONS.md D23) — and because it lives here, next to the scorecard
+ * rule, it is seen by rule (b) *before* the nudge rule can chase a task the tick is about
+ * to close.
+ *
  * Public interface:
  *   detect(snapshot: TickSnapshot): DetectSummary
  *   isRecipientInCycle(snapshot, workerId): boolean
@@ -30,6 +37,7 @@
 
 import { detectInstructionText } from '#lib/safety/allowlist.ts';
 import { isTerminal } from '#lib/states/index.ts';
+import { attendanceEvidenceFor, isNudgeableKind } from '#lib/engine/interview-loop.ts';
 import { submissionKindOfTask } from '#lib/engine/review-cycle.ts';
 import { fullDaysBetween, hoursBetween, parseInstant } from '#lib/engine/time.ts';
 import type {
@@ -139,9 +147,13 @@ function signalFor(
   const daysPastDue = fullDaysBetween(task.due_at, now);
   const overdue = parseInstant(task.due_at) < parseInstant(now);
   const daysUntilDue = fullDaysBetween(now, task.due_at);
-  // The record whose arrival completes the task: a review submission (loop 1) or a
-  // scorecard (loop 2). One rule, two loops — which is claim 1 of the spec.
-  const submission = submissionFor(task, submissionIndex) ?? scorecardFor(task, scorecardIndex);
+  // The record whose arrival completes the task: a review submission (loop 1), a scorecard
+  // or the held slot an interviewer sat (loop 2). One rule, three record kinds — which is
+  // claim 1 of the spec.
+  const submission =
+    submissionFor(task, submissionIndex) ??
+    scorecardFor(task, scorecardIndex) ??
+    attendanceEvidenceFor(task, snapshot.interview_slots ?? [], now);
   const previous = snapshot.last_tick?.task_states[task.id];
 
   const signal: TaskSignal = {
@@ -235,6 +247,7 @@ export function detect(snapshot: TickSnapshot): DetectSummary {
     nudgeable: signals.filter(
       (s) =>
         !s.terminal &&
+        isNudgeableKind(s.kind) &&
         s.status !== 'escalated' &&
         s.overdue &&
         !s.absent &&

@@ -187,18 +187,18 @@ loaded fixture bundle (`rt.bundle.prior_ratings`). On fixtures that is correct a
 Rippling adapter will need a real read before the calibration packet works on a tenant. This is
 the one place in `lib/cli` that touches the bundle instead of a port.
 
-**Two engine gaps loop 2 exposed** (reported to the orchestrator, worked around here):
+**Two engine gaps loop 2 exposed, both now closed in the engine** (block B2.3,
+docs/DECISIONS.md D23):
 
-1. `lib/engine/apply.ts`'s `rebook` moves the declining interviewer's _tasks_ to the stand-in
-   but leaves their pending `tl_scorecard` keyed to the person who dropped out. `detect`
-   matches a `submit_scorecard` task to a scorecard on `application|interviewer`, so without a
-   re-key the stand-in's task could never complete and the debrief would list a panellist who
-   never interviewed. `execute-interview.ts` re-keys it; the pure fold should grow the same line.
-2. `planTick` nudges an `attend_interview` task that `planInterviewTick` is about to complete in
-   the same tick. The task falls due at the _start_ of the slot, so the generic overdue rule
-   sees it before the completion rule fires, and a tick run after the interview both closes
-   attendance and sends a reminder about it. Harmless, and visible in the demo walkthrough,
-   which says so rather than hiding it.
+1. `rebook` re-keys the declining interviewer's pending `tl_scorecard` to the stand-in, in
+   `lib/engine/apply.ts` as well as here — `detect` matches a `submit_scorecard` task to its
+   scorecard on `application|interviewer`, so without the re-key the stand-in's task could
+   never complete and the debrief would list a panellist who never interviewed. Which rows
+   move is one pair of predicates (`movesOnRebook`, `rekeysOnRebook`), used by both.
+2. `attend_interview` is never nudged. The slot itself completes the task, through the generic
+   "the completing record appeared" rule in `detect.ts` — so it fires before the nudge rule
+   rather than after it — and `policyCheckFor` refuses an attendance nudge outright, which is
+   why `bin/nudge.mjs` cannot be pointed at one either.
 
 ## Adding a CLI
 

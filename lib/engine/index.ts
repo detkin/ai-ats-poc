@@ -26,11 +26,17 @@ export {
 export type { CalibrationInputs, CalibrationPacket } from '#lib/engine/packet.ts';
 export {
   MIN_BUSINESS_DAYS_OUT,
+  NEVER_NUDGED_TASK_KINDS,
+  REBOOKED_TASK_KINDS,
+  attendanceEvidenceFor,
   businessDaysBetween,
   chooseSlot,
   interviewSlotFor,
+  isNudgeableKind,
+  movesOnRebook,
   panelFor,
   rankOf,
+  rekeysOnRebook,
   scorecardsFor,
   substituteFor,
   // Loop 1 already exports a `tasksFor`; loop 2's is aliased rather than renamed, so the

@@ -14,9 +14,11 @@
  *
  * M2 (block B2.1) adds reference implementations for loop 2's actions: `place_hold` creates
  * the `tl_interview_slot` the executor will carry the real `hold_ref` on, `rebook` swaps one
- * interviewer on that slot **and moves their tasks to the stand-in**, `post_change` changes
- * no state at all (it is a message), and `propose_decision` writes a `tl_proposed_action` —
- * the only shape a candidate decision may take (spec §9).
+ * interviewer on that slot **and moves their work to the stand-in** — the tasks *and* the
+ * pending `tl_scorecard` those tasks complete against (block B2.3; without the re-key the
+ * stand-in's task could never close) — `post_change` changes no state at all (it is a
+ * message), and `propose_decision` writes a `tl_proposed_action` — the only shape a candidate
+ * decision may take (spec §9).
  *
  * Public interface: `applyPlan(snapshot, plan) -> TickSnapshot`.
  *
@@ -27,6 +29,7 @@
  * Spec: docs/SPEC.md §7 (tick), §10 (idempotence); docs/PLAN.md §2.5, §4 block B1.1.
  */
 
+import { movesOnRebook, rekeysOnRebook } from '#lib/engine/interview-loop.ts';
 import { assertTransition } from '#lib/states/index.ts';
 import type { PlannedAction, TickPlan, TickSnapshot } from '#lib/engine/snapshot.ts';
 import type {
@@ -35,6 +38,7 @@ import type {
   TlInterviewSlot,
   TlNudge,
   TlProposedAction,
+  TlScorecard,
   TlTask,
   TlTaskState,
 } from '#lib/types/engine.ts';
@@ -65,6 +69,7 @@ export function applyPlan(snapshot: TickSnapshot, plan: TickPlan): TickSnapshot 
   const interviewSlots: TlInterviewSlot[] = (snapshot.interview_slots ?? []).map((slot) => ({
     ...slot,
   }));
+  const scorecards: TlScorecard[] = (snapshot.scorecards ?? []).map((card) => ({ ...card }));
   let cycle: TlCycle = { ...snapshot.cycle };
   let packetHash = snapshot.last_packet_inputs_hash;
   let seq = 0;
@@ -200,14 +205,24 @@ export function applyPlan(snapshot: TickSnapshot, plan: TickPlan): TickSnapshot 
         };
         // The stand-in inherits the work: attending, and the scorecard afterwards.
         for (const task of tasks.values()) {
-          if (task.participant_worker_id !== action.declined_worker_id) continue;
-          if (task.external_ref !== slot.application_id) continue;
-          if (task.kind !== 'attend_interview' && task.kind !== 'submit_scorecard') continue;
+          if (!movesOnRebook(task, slot.application_id, action.declined_worker_id)) continue;
           tasks.set(task.id, {
             ...task,
             participant_worker_id: action.substitute_worker_id,
             updated_at: now,
           });
+        }
+        // …and so does the record that completes it. `detect` matches a `submit_scorecard`
+        // task to its scorecard on `application|interviewer`, so a pending scorecard left on
+        // the person who dropped out would strand the stand-in's task and put a panellist who
+        // never interviewed into the debrief (docs/DECISIONS.md D23).
+        for (const [index, card] of scorecards.entries()) {
+          if (!rekeysOnRebook(card, slot.application_id, action.declined_worker_id)) continue;
+          scorecards[index] = {
+            ...card,
+            interviewer_worker_id: action.substitute_worker_id,
+            updated_at: now,
+          };
         }
         return;
       }
@@ -254,6 +269,7 @@ export function applyPlan(snapshot: TickSnapshot, plan: TickPlan): TickSnapshot 
     proposals,
     anomalies,
     interview_slots: interviewSlots,
+    scorecards,
     last_tick: { at: now, task_states: taskStates },
   };
   if (packetHash === undefined) delete next.last_packet_inputs_hash;

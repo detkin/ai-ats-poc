@@ -235,6 +235,28 @@ describe('nudge', () => {
     expect(only(planTick(snapshot), 'nudge')).toHaveLength(0);
   });
 
+  it('never nudges an attend_interview task, however overdue it is (D23)', () => {
+    // Attendance is observed, not asked for: the held slot completes the task, and there is
+    // no reminder that could help somebody who has already sat (or missed) the hour.
+    const snapshot = makeSnapshot({
+      cycle: makeCycle({ type: 'interview' }),
+      tasks: [
+        makeTask('tl_task_0001', {
+          kind: 'attend_interview',
+          external_ref: 'app_0001',
+          due_at: '2026-08-28T17:00:00Z',
+        }),
+      ],
+    });
+    const plan = planTick(snapshot);
+    expect(only(plan, 'nudge')).toHaveLength(0);
+    const check = policyCheckFor(plan.detected.signals[0]!);
+    expect(check.passed).toBe(false);
+    expect(check.reasons).toEqual(['task_never_nudged']);
+    // …and the detect counts agree, so `bin/nudge.mjs` and `bin/tick.mjs` cannot disagree.
+    expect(plan.detected.counts.nudgeable).toBe(0);
+  });
+
   it('never nudges a terminal task (it closes the cycle instead)', () => {
     const snapshot = makeSnapshot({
       tasks: [makeTask('tl_task_0001', { due_at: '2026-09-02T23:59:59Z', status: 'done' })],

@@ -70,6 +70,8 @@ const RECRUITER = 'w_0114';
 let dataDir: string;
 let cycleId: string;
 let holdRef: string;
+/** The pending scorecard the decliner owes before the re-book; it has to follow them. */
+let declinerScorecardId: string;
 
 const tasks = (): TlTask[] =>
   (readState<'task'>(dataDir, 'tasks.json') as TlTask[]).filter((row) => row.cycle_id === cycleId);
@@ -230,6 +232,9 @@ describe('tick 1 — the panel is booked and the work comes into being', () => {
 
 describe('a decline re-staffs the panel', () => {
   it('swaps in a same-team, same-rank peer and posts the change to #people-ops', async () => {
+    declinerScorecardId =
+      scorecards().find((card) => card.interviewer_worker_id === DECLINER)?.id ?? '';
+    expect(declinerScorecardId).not.toBe('');
     reply(
       `reply_${DECLINER}_decline`,
       "Sorry — I can't make the Wednesday onsite, I'll be at the vendor review all afternoon.",
@@ -254,10 +259,16 @@ describe('a decline re-staffs the panel', () => {
       'submit_scorecard',
     ]);
     expect(tasks().some((task) => task.participant_worker_id === DECLINER)).toBe(false);
+    // The *same* pending scorecard, re-keyed — not a second one, and not left on the person
+    // who dropped out (docs/DECISIONS.md D23).
+    expect(scorecards()).toHaveLength(4);
+    const rekeyed = scorecards().filter((card) => card.interviewer_worker_id === SUBSTITUTE);
     expect(
-      scorecards().some((card) => card.interviewer_worker_id === SUBSTITUTE),
+      rekeyed,
       'the pending scorecard still names the interviewer who dropped out',
-    ).toBe(true);
+    ).toHaveLength(1);
+    expect(rekeyed[0]?.status).toBe('pending');
+    expect(rekeyed[0]?.id).toBe(declinerScorecardId);
     expect(scorecards().some((card) => card.interviewer_worker_id === DECLINER)).toBe(false);
 
     const posts = readOutbox(dataDir).filter((line) => line.template_id === 'panel_change');
@@ -386,7 +397,8 @@ describe('a reply is untrusted text', () => {
 });
 
 describe('scorecards are chased, then quoted', () => {
-  it('completes the attendance tasks once the slot has been and gone', async () => {
+  it('completes the attendance tasks once the slot has been and gone, and nudges nobody', async () => {
+    const before = readOutbox(dataDir).length;
     const result = await tick(T.afterInterview);
     const completed = result.actions.filter((action) => action.kind === 'complete_task');
     expect(completed).toHaveLength(4);
@@ -395,6 +407,13 @@ describe('scorecards are chased, then quoted', () => {
         .filter((task) => task.kind === 'attend_interview')
         .every((task) => task.status === 'done'),
     ).toBe(true);
+
+    // The attendance task fell due at the *start* of the slot, so this tick sees it overdue.
+    // Nobody is reminded to attend an interview they have already sat (docs/DECISIONS.md D23).
+    expect(result.actions.filter((action) => action.kind === 'nudge')).toHaveLength(0);
+    expect(result.nudges).toBe(0);
+    expect(readOutbox(dataDir)).toHaveLength(before);
+    expect(tasks().every((task) => task.nudged_at === undefined)).toBe(true);
   });
 
   it('files three scorecards from the thread and completes their tasks', async () => {

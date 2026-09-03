@@ -68,15 +68,18 @@ node bin/tick.mjs --cycle tl_cycle_00000001 --json
 - **`holds`** — a `place_hold` happened. Its `record_id` is the `tl_interview_slot`, and the
   `detail` names the `hold_ref`, the time, and how many tasks and scorecards it brought into
   being. **The hold is what creates the work**: one `attend_interview` task per panellist due
-  at the start of the slot, one `submit_scorecard` task due `scorecard_due_hours` after it
-  ends, one pending `tl_scorecard` each, and one `interviewer_brief` DM per panellist **on the
+  at the start of the slot (completed by observation once the slot ends, never nudged), one
+  `submit_scorecard` task due `scorecard_due_hours` after it ends, one pending `tl_scorecard`
+  each, and one `interviewer_brief` DM per panellist **on the
   hold's own thread**. That thread is where declines and scorecards come back.
 - **`rebooks`** — somebody declined and a same-team, same-level-rank peer took the slot. The
-  time does not move and the hold is not replaced. A `post_change` to `_tenant.md`'s summary
-  channel goes with it.
+  time does not move and the hold is not replaced. The stand-in inherits both the decliner's
+  tasks and their pending `tl_scorecard`, and nobody who has declined _this_ slot can be its
+  stand-in. A `post_change` to `_tenant.md`'s summary channel goes with it.
 - **`proposals`** — a candidate decision was _proposed_. Never executed. See step 6.
 - **`nudges` / `nudged_tasks`** — the ordinary chase, loop 1's code unchanged: one DM per
-  person however many things they owe.
+  person however many things they owe. Scorecards only: `attend_interview` is never nudged,
+  because the slot itself completes it once the hour has passed (docs/DECISIONS.md D23).
 - **`anomalies`** — a reply tried to instruct the agent. Recorded, never obeyed
   (`_shared.md` §3).
 - **`changed: false`** — the tick was a no-op. That is the right answer for a second tick at
@@ -276,10 +279,10 @@ that hour), their two tasks and their pending scorecard follow them, and one mes
 TL_NOW=2026-09-09T18:30:00Z node bin/tick.mjs --cycle <cycle id> --json
 ```
 
-Four `complete_task`: the slot has been and gone, and the slot record is the evidence. Expect
-four `attend_interview` reminders on this same tick as well — the attendance task falls due at
-the _start_ of the slot, so a tick after it has ended sees it as overdue before the completion
-rule fires. Say so; do not pretend it did not happen.
+Four `complete_task` and **nothing else**: the slot has been and gone, and the slot record is
+the evidence that the panel sat. The attendance tasks fell due at the _start_ of the slot, so
+this tick does see them overdue — and still sends nobody a reminder, because `attend_interview`
+is never nudged (docs/DECISIONS.md D23). `nudges: 0`, and `data/outbox.jsonl` is unchanged.
 
 **Step 6 — three scorecards, then the chase.** Append three lines to `data/inbox.jsonl` on the
 same thread, `message_ref` `scorecard_w_0007`, `scorecard_w_0002`, `scorecard_w_0025`, each
@@ -290,9 +293,10 @@ TL_NOW=2026-09-10T16:00:00Z node bin/tick.mjs --cycle <cycle id> --json   # 3 co
 TL_NOW=2026-09-11T19:00:00Z node bin/tick.mjs --cycle <cycle id> --json   # 1 nudge
 ```
 
-The chase waits for `cadence.nudge_min_gap_hours` (48) measured from that person's last
-reminder, which is why it lands on 09-11 and not sooner. One DM, to the one person who has not
-filed.
+Nothing is chased on 09-10: the scorecards are not due until `2026-09-10T18:00:00Z`, two hours
+after that tick. The 09-11 tick finds the one that is missing overdue and sends a single DM to
+the one person who has not filed. Any _further_ reminder to them waits for
+`cadence.nudge_min_gap_hours` (48), measured from that DM.
 
 **Step 7 — the last scorecard, and the debrief.** Append `scorecard_w_0028`, then:
 

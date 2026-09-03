@@ -233,6 +233,68 @@ describe('an interviewer declines', () => {
   });
 });
 
+describe('a rebook moves the record the work completes against', () => {
+  const pending = [...STAFF_ENG_PANEL].map((id, index) => scorecard(id, index + 1, 'pending'));
+  const base = interviewSnapshot({
+    tasks: panelTasks(),
+    interview_slots: [heldSlot()],
+    scorecards: pending,
+    declines: [{ worker_id: STAFF_ENG_DECLINER, slot_id: SLOT_ID }],
+  });
+
+  it('re-keys the decliner’s pending scorecard to the stand-in (D23)', () => {
+    const after = applyPlan(base, planTick(base));
+    const cards = after.scorecards ?? [];
+    expect(cards).toHaveLength(pending.length);
+    expect(cards.some((card) => card.interviewer_worker_id === STAFF_ENG_DECLINER)).toBe(false);
+    const moved = cards.find((card) => card.interviewer_worker_id === STAFF_ENG_SUBSTITUTE);
+    // The same record, re-keyed — not a new one, and still pending.
+    expect(moved?.id).toBe(
+      pending.find((card) => card.interviewer_worker_id === STAFF_ENG_DECLINER)?.id,
+    );
+    expect(moved?.status).toBe('pending');
+  });
+
+  it('leaves the stand-in a scorecard task that can actually complete', () => {
+    const after = applyPlan(base, planTick(base));
+    const card = (after.scorecards ?? []).find(
+      (row) => row.interviewer_worker_id === STAFF_ENG_SUBSTITUTE,
+    );
+    const submitted: TickSnapshot = {
+      ...after,
+      now: AFTER_SLOT,
+      scorecards: (after.scorecards ?? []).map((row) =>
+        row.id === card?.id ? { ...row, status: 'submitted' as const } : row,
+      ),
+    };
+    const completions = planTick(submitted).actions.filter(
+      (action) => action.kind === 'complete_task' && action.submission_id === card?.id,
+    );
+    expect(completions).toHaveLength(1);
+  });
+
+  it('never picks a worker who declined this slot as its stand-in (D23)', () => {
+    const after = applyPlan(base, planTick(base));
+    // The stand-in now declines too. The first decliner is free, on the team and at the same
+    // rank — and has already said they cannot make this hour.
+    const twice: TickSnapshot = {
+      ...after,
+      declines: [
+        { worker_id: STAFF_ENG_DECLINER, slot_id: SLOT_ID },
+        { worker_id: STAFF_ENG_SUBSTITUTE, slot_id: SLOT_ID },
+      ],
+    };
+    const rebooks = planTick(twice).actions.filter((action) => action.kind === 'rebook');
+    expect(rebooks).toHaveLength(1);
+    const second = rebooks[0];
+    expect(second?.kind === 'rebook' && second.declined_worker_id).toBe(STAFF_ENG_SUBSTITUTE);
+    const chosen = second?.kind === 'rebook' ? second.substitute_worker_id : '';
+    expect(chosen).not.toBe(STAFF_ENG_DECLINER);
+    expect(chosen).not.toBe(STAFF_ENG_SUBSTITUTE);
+    expect(STAFF_ENG_PANEL).not.toContain(chosen);
+  });
+});
+
 describe('an interviewer declines and nobody at that rank is free', () => {
   const everyoneAway = new Map<WorkerId, AvailabilityAnswer>(
     bundle.workers.map((worker) => [
@@ -267,16 +329,47 @@ describe('an interviewer declines and nobody at that rank is free', () => {
 /* --------------------------------------------------- (iii)/(iv)/(v) the rest */
 
 describe('after the interview', () => {
-  it('completes the attendance tasks the held slot evidences', () => {
+  it('completes the attendance tasks the held slot evidences, and nudges nobody', () => {
     const base = interviewSnapshot({
       tasks: panelTasks(),
       interview_slots: [heldSlot()],
       now: AFTER_SLOT,
     });
-    const completions = planTick(base).actions.filter((action) => action.kind === 'complete_task');
+    const plan = planTick(base);
+    const completions = plan.actions.filter((action) => action.kind === 'complete_task');
     expect(completions).toHaveLength(STAFF_ENG_PANEL.length);
     for (const action of completions) {
       expect(action.kind === 'complete_task' && action.submission_id).toBe(SLOT_ID);
+    }
+    // The attendance task fell due at the *start* of the slot, so a tick after it has ended
+    // sees it overdue — and still sends nothing, because attendance is never chased (D23).
+    expect(kinds(plan.actions)).not.toContain('nudge');
+  });
+
+  it('completes attendance through the generic rule, not a loop-2 one', () => {
+    // `planInterviewTick` alone plans nothing here: the completion lives in `detect`, which
+    // is why it is seen before the nudge rule rather than after it.
+    const base = interviewSnapshot({
+      tasks: panelTasks(),
+      interview_slots: [heldSlot()],
+      now: AFTER_SLOT,
+    });
+    expect(planInterviewTick(base)).toEqual([]);
+  });
+
+  it('does not nudge attendance even long after the slot, with scorecards overdue', () => {
+    const base = interviewSnapshot({
+      tasks: panelTasks(),
+      // A slot that was never held: no evidence, so attendance cannot complete either.
+      interview_slots: [heldSlot({ hold_ref: null, status: 'proposed' })],
+      now: '2026-09-11T17:00:00Z',
+    });
+    const plan = planTick(base);
+    expect(plan.actions.filter((action) => action.kind === 'complete_task')).toHaveLength(0);
+    for (const nudge of plan.actions.filter((action) => action.kind === 'nudge')) {
+      expect(nudge.kind === 'nudge' && nudge.tasks.map((task) => task.kind)).toEqual([
+        'submit_scorecard',
+      ]);
     }
   });
 

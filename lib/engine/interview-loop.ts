@@ -16,7 +16,10 @@
  *   tasksFor(cycle, application, panel, slot, policy)           -> NewRecord<TlTask>[]
  *   scorecardsFor(application, panel)                          -> NewRecord<TlScorecard>[]
  *   interviewSlotFor(application, panel, slot, holdRef)        -> NewRecord<TlInterviewSlot>
+ *   attendanceEvidenceFor(task, slots, now)                    -> TlInterviewSlot | undefined
+ *   isNudgeableKind(kind), movesOnRebook(task, …), rekeysOnRebook(card, …)
  *   rankOf(levels, levelId), businessDaysBetween(from, to), MIN_BUSINESS_DAYS_OUT
+ *   NEVER_NUDGED_TASK_KINDS, REBOOKED_TASK_KINDS
  *
  * Conventions this block establishes:
  *  - **`tl_task.external_ref` is the application id** for `attend_interview` and
@@ -30,6 +33,10 @@
  *    the ordinary nudge path chases it, with loop 1's cadence, batching, attempt cap,
  *    absence and quiet-hours rules unchanged. There is no `request_scorecard` action, and
  *    that absence is the point: one engine, two loops (spec §1 claim 1).
+ *  - **Attendance is observed, never chased** (docs/DECISIONS.md D23). `attend_interview` is
+ *    the one task kind the nudge rule skips: the slot itself is the evidence, so the task
+ *    completes once the hour has been and gone (`attendanceEvidenceFor`), and reminding
+ *    somebody about an interview they have already sat is noise, not a nudge.
  *
  * Determinism (spec §10): every candidate list is sorted by worker id before it is cut, so
  * the same org and the same policy always produce the same panel and the same substitute.
@@ -214,6 +221,83 @@ export function substituteFor(
   const sameTeam = all.find((w) => w.team_id === declined.team_id && eligible(w));
   if (sameTeam !== undefined) return sameTeam;
   return all.find((w) => w.department_id === declined.department_id && eligible(w)) ?? null;
+}
+
+/* ------------------------------------------------- attendance, nudges, rebook */
+
+/**
+ * Task kinds the generic nudge rule never chases (docs/DECISIONS.md D23). Attendance is the
+ * only one: nobody needs a reminder to attend an interview they have already sat, and the
+ * task is completed by observation below rather than by a reply.
+ */
+export const NEVER_NUDGED_TASK_KINDS: ReadonlySet<TlTask['kind']> = new Set(['attend_interview']);
+
+/** True when the ordinary nudge path may chase a task of this kind. */
+export function isNudgeableKind(kind: TlTask['kind']): boolean {
+  return !NEVER_NUDGED_TASK_KINDS.has(kind);
+}
+
+/**
+ * The booked slot that evidences one panellist's attendance, once the hour has passed — the
+ * `attend_interview` equivalent of "the review submission arrived". A slot counts only when
+ * it was actually held (`hold_ref` non-null, not cancelled), it names this interviewer, and
+ * `now` is at or past its `end_at`. Newest matching slot by id wins, so a re-booked panel
+ * completes against the booking it actually ran.
+ */
+export function attendanceEvidenceFor(
+  task: TlTask,
+  slots: readonly TlInterviewSlot[],
+  now: InstantISO,
+): TlInterviewSlot | undefined {
+  if (task.kind !== 'attend_interview' || task.external_ref === null) return undefined;
+  return [...slots]
+    .filter(
+      (slot) =>
+        slot.application_id === task.external_ref &&
+        slot.hold_ref !== null &&
+        slot.status !== 'cancelled' &&
+        slot.interviewer_worker_ids.includes(task.participant_worker_id) &&
+        parseInstant(now) >= parseInstant(slot.end_at),
+    )
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .at(-1);
+}
+
+/** Task kinds a rebooked interviewer hands to their stand-in. */
+export const REBOOKED_TASK_KINDS: ReadonlySet<TlTask['kind']> = new Set([
+  'attend_interview',
+  'submit_scorecard',
+]);
+
+/** True when a `rebook` moves this task from the decliner to their stand-in. */
+export function movesOnRebook(
+  task: TlTask,
+  applicationId: string,
+  declinedWorkerId: WorkerId,
+): boolean {
+  return (
+    task.participant_worker_id === declinedWorkerId &&
+    task.external_ref === applicationId &&
+    REBOOKED_TASK_KINDS.has(task.kind)
+  );
+}
+
+/**
+ * True when a `rebook` re-keys this pending scorecard to the stand-in. It has to: `detect`
+ * matches a `submit_scorecard` task to its scorecard on `application|interviewer`, so a
+ * scorecard left on the person who dropped out would strand the stand-in's task forever and
+ * put a panellist who never interviewed into the debrief (docs/DECISIONS.md D23).
+ */
+export function rekeysOnRebook(
+  card: TlScorecard,
+  applicationId: string,
+  declinedWorkerId: WorkerId,
+): boolean {
+  return (
+    card.application_id === applicationId &&
+    card.interviewer_worker_id === declinedWorkerId &&
+    card.status === 'pending'
+  );
 }
 
 /* ---------------------------------------------------------------- task set */
