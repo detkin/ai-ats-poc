@@ -82,6 +82,8 @@ describe('the committed tenant policy', () => {
       respect_location_hours: true,
       weekends: true,
       holidays: true,
+      default_work_hours: { start: '09:00', end: '18:00' },
+      default_timezone: 'America/Los_Angeles',
     });
     expect(policy.channels).toEqual({
       nudge: 'slack_dm',
@@ -330,5 +332,62 @@ describe('defaultPolicyPath', () => {
   it('ignores a blank TL_TENANT_DIR', () => {
     process.env.TL_TENANT_DIR = '   ';
     expect(defaultPolicyPath()).toBe(path.join(TENANT_DIR, POLICY_FILENAME));
+  });
+});
+
+/**
+ * `quiet_hours.default_work_hours` and `quiet_hours.default_timezone` (block B2.6).
+ *
+ * A Rippling work location carries an address and nothing else — no hours, no timezone
+ * (docs/testing/live-rippling.md, DECISIONS D27) — so these two are the only thing standing
+ * between a bridged tenant and a `Location` with no working window at all. A bad value here
+ * would silence every nudge or send them all at midnight, so the validator is strict.
+ */
+describe('quiet_hours defaults (B2.6)', () => {
+  it('requires both keys', () => {
+    for (const key of ['default_work_hours', 'default_timezone']) {
+      const errors = errorsFor((doc) => {
+        delete sectionOf(doc, 'quiet_hours')[key];
+      });
+      expect(errors.join('\n')).toContain(
+        key === 'default_timezone'
+          ? 'quiet_hours.default_timezone is required'
+          : "missing required section: 'default_work_hours'",
+      );
+    }
+  });
+
+  it('rejects a start or end that is not HH:MM', () => {
+    const errors = errorsFor((doc) => {
+      const quiet = sectionOf(doc, 'quiet_hours');
+      quiet.default_work_hours = { start: '9am', end: '18:00' };
+    });
+    expect(errors.join('\n')).toContain('quiet_hours.default_work_hours.start must be HH:MM');
+  });
+
+  it('rejects a window that ends before it starts', () => {
+    const errors = errorsFor((doc) => {
+      const quiet = sectionOf(doc, 'quiet_hours');
+      quiet.default_work_hours = { start: '18:00', end: '09:00' };
+    });
+    expect(errors.join('\n')).toContain('must be earlier than');
+  });
+
+  it('rejects a timezone that is not an IANA zone', () => {
+    const errors = errorsFor((doc) => {
+      sectionOf(doc, 'quiet_hours').default_timezone = 'PST';
+    });
+    expect(errors.join('\n')).toContain('quiet_hours.default_timezone must be an IANA zone');
+  });
+
+  it('rejects an unknown key inside default_work_hours', () => {
+    const errors = errorsFor((doc) => {
+      sectionOf(doc, 'quiet_hours').default_work_hours = {
+        start: '09:00',
+        end: '18:00',
+        lunch: '12:00',
+      };
+    });
+    expect(errors.join('\n')).toContain("unknown key in section 'default_work_hours': 'lunch'");
   });
 });

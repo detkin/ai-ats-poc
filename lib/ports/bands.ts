@@ -29,11 +29,18 @@ export interface BandQuery {
   location_group: LocationGroup;
 }
 
+/**
+ * A worker's pay and where it sits in their band.
+ *
+ * Every field is nullable because compensation is not always readable: the Rippling MCP
+ * redacts pay outright, so a `bridge` tenant (docs/PLAN.md §8) answers all-nulls rather than
+ * a plausible zero. A caller that renders pay must handle `null` and say so.
+ */
 export interface WorkerCompensation {
-  base_annual: number;
-  currency: Currency;
+  base_annual: number | null;
+  currency: Currency | null;
   band_id: CompBandId | null;
-  /** base_annual / band.mid, or null when no band matches. */
+  /** base_annual / band.mid, or null when no band matches or no pay is readable. */
   compa_ratio: number | null;
 }
 

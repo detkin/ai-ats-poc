@@ -19,6 +19,7 @@
  * agree on one spelling. Semantics are unchanged.
  */
 
+import type { AdapterMode } from '#lib/ports/context.ts';
 import type {
   ApplicationId,
   CandidateId,
@@ -288,7 +289,8 @@ export type TlLedgerResult = (typeof LEDGER_RESULTS)[number];
 export interface TlActor {
   worker_id: WorkerId;
   email: string;
-  adapter: 'fixture' | 'rippling';
+  /** Which port family produced the call: `fixture`, `rippling` or `bridge`. */
+  adapter: AdapterMode;
 }
 
 export interface TlTokenUsage {

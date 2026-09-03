@@ -27,6 +27,12 @@
 
 import { join } from 'node:path';
 
+import {
+  BridgeSnapshotMissingError,
+  bridgeTier1Dir,
+  buildBridgePorts,
+  readProvenance,
+} from '#lib/adapters/bridge/index.ts';
 import { buildFixturePorts } from '#lib/adapters/fixture/index.ts';
 import { ActorNotFoundError } from '#lib/adapters/fixture/graph.ts';
 import { ledgered } from '#lib/adapters/ledgered.ts';
@@ -44,6 +50,38 @@ import type { Ports } from '#lib/ports/index.ts';
 import { loadLoopStates } from '#lib/states/index.ts';
 import type { LoopStates } from '#lib/states/index.ts';
 
+export {
+  BRIDGE_PERMISSION,
+  BridgeSnapshotInvalidError,
+  BridgeSnapshotMissingError,
+  MANAGER_LEVEL_ID,
+  MAPPING_VERSION,
+  PROVENANCE_FILE,
+  READ_FUNCTIONS,
+  SNAPSHOT_FILENAME,
+  TIER1_DIRNAME,
+  UNASSIGNED_DEPARTMENT_ID,
+  UNASSIGNED_LOCATION_ID,
+  UNKNOWN_LEAVE_TYPE_ID,
+  UNKNOWN_LEVEL_ID,
+  bridgeTier1Dir,
+  buildBridgePorts,
+  importSnapshot,
+  jobFunctionForDepartment,
+  mapSnapshot,
+  provenancePath,
+  readProvenance,
+  readSnapshotFile,
+  validateSnapshot,
+} from '#lib/adapters/bridge/index.ts';
+export type {
+  BridgeCall,
+  BridgeSnapshot,
+  ImportResult,
+  MapResult,
+  McpPerson,
+  Provenance,
+} from '#lib/adapters/bridge/index.ts';
 export { buildFixturePorts } from '#lib/adapters/fixture/index.ts';
 export type { FixturePortsOptions } from '#lib/adapters/fixture/index.ts';
 export {
@@ -158,6 +196,18 @@ export function resolveActor(bundle: TenantBundle, config: Config): ActorContext
 }
 
 /**
+ * The imported tenant under `TL_DATA_DIR/tier1`, or `BridgeSnapshotMissingError` naming the
+ * command that creates one. The provenance file is the marker: Tier-1 JSON alone could have
+ * been copied in by hand, and a bridged run must be able to say where its data came from.
+ */
+function loadBridgeTenant(config: Config): TenantBundle {
+  if (readProvenance(config.dataDir) === null) {
+    throw new BridgeSnapshotMissingError(config.dataDir);
+  }
+  return loadTenant(bridgeTier1Dir(config.dataDir));
+}
+
+/**
  * The `rippling` port set, with availability composed over the not-connected calendar stub.
  * Every method still throws; the point is that the *shape* is the same in both modes, so a
  * caller cannot depend on a seam that only exists on fixtures.
@@ -184,7 +234,14 @@ export function buildRuntime(config: Config = loadConfig(), options: RuntimeOpti
   const states = options.states ?? loadLoopStates();
   const now = (): Date => clockNow(config);
 
-  const bundle = config.adapter === 'fixture' ? loadTenant(config.fixturesDir) : undefined;
+  // `bridge` loads the tenant the agent imported; `fixture` the committed one. Both then run
+  // through the *same* fixture port classes — that is the point of the bridge (plan §8).
+  const bundle =
+    config.adapter === 'fixture'
+      ? loadTenant(config.fixturesDir)
+      : config.adapter === 'bridge'
+        ? loadBridgeTenant(config)
+        : undefined;
   const actor: ActorContext =
     bundle === undefined
       ? {
@@ -198,15 +255,24 @@ export function buildRuntime(config: Config = loadConfig(), options: RuntimeOpti
   const raw: Ports =
     bundle === undefined
       ? ripplingPorts()
-      : buildFixturePorts({
-          fixturesDir: config.fixturesDir,
-          dataDir: config.dataDir,
-          actorWorkerId: actor.worker_id,
-          policy,
-          now,
-          bundle,
-          states,
-        });
+      : config.adapter === 'bridge'
+        ? buildBridgePorts({
+            dataDir: config.dataDir,
+            actorWorkerId: actor.worker_id,
+            policy,
+            now,
+            bundle,
+            states,
+          })
+        : buildFixturePorts({
+            fixturesDir: config.fixturesDir,
+            dataDir: config.dataDir,
+            actorWorkerId: actor.worker_id,
+            policy,
+            now,
+            bundle,
+            states,
+          });
 
   const ledgerContext = {
     actor,

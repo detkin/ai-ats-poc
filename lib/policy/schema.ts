@@ -6,7 +6,7 @@
  * prompt", §7 cadence/escalation, §8 loops 1 and 2; plan §2.6; DECISIONS D3).
  *
  * Public interface:
- *   types    TenantPolicy, TenantIdentity, CadencePolicy, QuietHoursPolicy,
+ *   types    TenantPolicy, TenantIdentity, CadencePolicy, QuietHoursPolicy, DefaultWorkHours,
  *            ChannelsPolicy, EscalationPolicy, AbsencePolicy, StaggerDays,
  *            ReviewCyclePolicy, InterviewLoopPolicy, ChannelKind, EscalationTarget
  *   consts   CHANNEL_KINDS, ESCALATION_TARGETS, POLICY_SECTIONS, POLICY_TOP_LEVEL_KEYS
@@ -36,11 +36,28 @@ export interface CadencePolicy {
   max_attempts: number;
 }
 
-/** When the engine must stay silent (spec §7 step 1). */
+/** `HH:MM`–`HH:MM` local working window. */
+export interface DefaultWorkHours {
+  /** `HH:MM`, 24-hour. */
+  start: string;
+  end: string;
+}
+
+/**
+ * When the engine must stay silent (spec §7 step 1).
+ *
+ * `default_work_hours` and `default_timezone` are the tenant's fallbacks for a location that
+ * carries neither: the live Rippling MCP returns work locations with an address and nothing
+ * else — no hours, no timezone (docs/testing/live-rippling.md, D27). The bridge mapper fills
+ * a `Location` from these when the people at it cannot supply a timezone of their own.
+ */
 export interface QuietHoursPolicy {
   respect_location_hours: boolean;
   weekends: boolean;
   holidays: boolean;
+  default_work_hours: DefaultWorkHours;
+  /** IANA zone, e.g. `America/Los_Angeles`. */
+  default_timezone: string;
 }
 
 /** Where messages go (spec §7 step 2, "channel by policy"). */

@@ -1,0 +1,938 @@
+{
+  "fetched_at": "2026-09-02T15:40:00Z",
+  "actor": {
+    "id": "w_ceo",
+    "rippling_url": "https://app.rippling.com/people/w_ceo",
+    "work_email": "ada.nolan@example.test",
+    "display_name": "Ada Nolan",
+    "given_name": "Ada",
+    "middle_name": null,
+    "family_name": "Nolan",
+    "preferred_given_name": null,
+    "preferred_family_name": null,
+    "title": "Chief Executive Officer",
+    "status": "ACTIVE",
+    "start_date": "2019-01-07",
+    "end_date": null,
+    "country": "US",
+    "employee_number": "ceo",
+    "permanent_profile_number": "Pceo",
+    "is_manager": true,
+    "timezone": "America/Los_Angeles",
+    "employment_type": {
+      "id": "et_1",
+      "type": "EMPLOYEE",
+      "label": "Employee",
+      "name": "EMPLOYEE"
+    },
+    "manager": null,
+    "department": {
+      "id": "dept_ga",
+      "name": "G&A",
+      "reference_code": "GA"
+    },
+    "location": {
+      "type": "WORK",
+      "id": "loc_sf",
+      "name": "San Francisco HQ",
+      "address": {
+        "type": "WORK",
+        "formatted": "1 Test Way, San Francisco",
+        "street_address": "1 Test Way",
+        "locality": "San Francisco",
+        "region": null,
+        "postal_code": "00000",
+        "country": "US"
+      }
+    },
+    "legal_entity": {
+      "id": "le_1",
+      "legal_name": "Northwind Test Ltd",
+      "country": "US",
+      "entity_level": "PRIMARY"
+    },
+    "teams": null,
+    "level": null,
+    "business_partners": [],
+    "redacted_fields": [],
+    "company_id": "co_test_1"
+  },
+  "departments": {
+    "query": "",
+    "total_matches": 4,
+    "total_matches_partial": false,
+    "truncated": false,
+    "results": [
+      {
+        "id": "dept_eng",
+        "name": "Engineering",
+        "parent_id": null,
+        "parent_name": null,
+        "reference_code": "ENG",
+        "department_hierarchy_id": ["dept_eng"],
+        "redacted_fields": []
+      },
+      {
+        "id": "dept_platform",
+        "name": "Platform Engineering",
+        "parent_id": "dept_eng",
+        "parent_name": "Engineering",
+        "reference_code": "PLAT",
+        "department_hierarchy_id": ["dept_eng", "dept_platform"],
+        "redacted_fields": []
+      },
+      {
+        "id": "dept_ga",
+        "name": "G&A",
+        "parent_id": null,
+        "parent_name": null,
+        "reference_code": "GA",
+        "department_hierarchy_id": ["dept_ga"],
+        "redacted_fields": []
+      },
+      {
+        "id": "dept_cs",
+        "name": "Customer Success",
+        "parent_id": null,
+        "parent_name": null,
+        "reference_code": "CS",
+        "department_hierarchy_id": ["dept_cs"],
+        "redacted_fields": []
+      }
+    ]
+  },
+  "locations": {
+    "query": "",
+    "total_matches": 2,
+    "total_matches_partial": false,
+    "truncated": false,
+    "results": [
+      {
+        "id": "loc_sf",
+        "name": "San Francisco HQ",
+        "address": {
+          "type": "WORK",
+          "formatted": "1 Test Way, San Francisco",
+          "street_address": "1 Test Way",
+          "locality": "San Francisco",
+          "region": null,
+          "postal_code": "00000",
+          "country": "US"
+        },
+        "redacted_fields": []
+      },
+      {
+        "id": "loc_berlin",
+        "name": "Berlin Office",
+        "address": {
+          "type": "WORK",
+          "formatted": "1 Test Way, Berlin",
+          "street_address": "1 Test Way",
+          "locality": "Berlin",
+          "region": null,
+          "postal_code": "00000",
+          "country": "DE"
+        },
+        "redacted_fields": []
+      }
+    ]
+  },
+  "leave_types": {
+    "total_matches": 3,
+    "results": [
+      {
+        "id": "lt_vacation",
+        "name": "Vacation",
+        "type": "VACATION",
+        "description": "Paid time off",
+        "is_paid": true,
+        "is_managed_by_external_system": false
+      },
+      {
+        "id": "lt_sick",
+        "name": "Sick",
+        "type": "SICK",
+        "description": null,
+        "is_paid": true,
+        "is_managed_by_external_system": false
+      },
+      {
+        "id": "lt_wfh",
+        "name": "Work from home",
+        "type": "WFH",
+        "description": null,
+        "is_paid": true,
+        "is_managed_by_external_system": false
+      }
+    ]
+  },
+  "teams": {
+    "query": "",
+    "total_matches": 0,
+    "total_matches_partial": false,
+    "truncated": false,
+    "results": []
+  },
+  "people": [
+    {
+      "id": "w_ceo",
+      "rippling_url": "https://app.rippling.com/people/w_ceo",
+      "work_email": "ada.nolan@example.test",
+      "display_name": "Ada Nolan",
+      "given_name": "Ada",
+      "middle_name": null,
+      "family_name": "Nolan",
+      "preferred_given_name": null,
+      "preferred_family_name": null,
+      "title": "Chief Executive Officer",
+      "status": "ACTIVE",
+      "start_date": "2019-01-07",
+      "end_date": null,
+      "country": "US",
+      "employee_number": "ceo",
+      "permanent_profile_number": "Pceo",
+      "is_manager": true,
+      "timezone": "America/Los_Angeles",
+      "employment_type": {
+        "id": "et_1",
+        "type": "EMPLOYEE",
+        "label": "Employee",
+        "name": "EMPLOYEE"
+      },
+      "manager": null,
+      "department": {
+        "id": "dept_ga",
+        "name": "G&A",
+        "reference_code": "GA"
+      },
+      "location": {
+        "type": "WORK",
+        "id": "loc_sf",
+        "name": "San Francisco HQ",
+        "address": {
+          "type": "WORK",
+          "formatted": "1 Test Way, San Francisco",
+          "street_address": "1 Test Way",
+          "locality": "San Francisco",
+          "region": null,
+          "postal_code": "00000",
+          "country": "US"
+        }
+      },
+      "legal_entity": {
+        "id": "le_1",
+        "legal_name": "Northwind Test Ltd",
+        "country": "US",
+        "entity_level": "PRIMARY"
+      },
+      "teams": null,
+      "level": null,
+      "business_partners": [],
+      "redacted_fields": [],
+      "company_id": "co_test_1"
+    },
+    {
+      "id": "w_cto",
+      "rippling_url": "https://app.rippling.com/people/w_cto",
+      "work_email": "bram.okafor@example.test",
+      "display_name": "Bram Okafor",
+      "given_name": "Bram",
+      "middle_name": null,
+      "family_name": "Okafor",
+      "preferred_given_name": null,
+      "preferred_family_name": null,
+      "title": "Chief Technology Officer",
+      "status": "ACTIVE",
+      "start_date": "2020-05-11",
+      "end_date": null,
+      "country": "US",
+      "employee_number": "cto",
+      "permanent_profile_number": "Pcto",
+      "is_manager": true,
+      "timezone": "America/Los_Angeles",
+      "employment_type": {
+        "id": "et_1",
+        "type": "EMPLOYEE",
+        "label": "Employee",
+        "name": "EMPLOYEE"
+      },
+      "manager": {
+        "id": "w_ceo",
+        "display_name": "Ada Nolan",
+        "work_email": "ada@example.test"
+      },
+      "department": {
+        "id": "dept_eng",
+        "name": "Engineering",
+        "reference_code": "ENG"
+      },
+      "location": {
+        "type": "WORK",
+        "id": "loc_sf",
+        "name": "San Francisco HQ",
+        "address": {
+          "type": "WORK",
+          "formatted": "1 Test Way, San Francisco",
+          "street_address": "1 Test Way",
+          "locality": "San Francisco",
+          "region": null,
+          "postal_code": "00000",
+          "country": "US"
+        }
+      },
+      "legal_entity": {
+        "id": "le_1",
+        "legal_name": "Northwind Test Ltd",
+        "country": "US",
+        "entity_level": "PRIMARY"
+      },
+      "teams": null,
+      "level": null,
+      "business_partners": [],
+      "redacted_fields": [],
+      "company_id": "co_test_1"
+    },
+    {
+      "id": "w_eng1",
+      "rippling_url": "https://app.rippling.com/people/w_eng1",
+      "work_email": "cleo.marsh@example.test",
+      "display_name": "Cleo Marsh",
+      "given_name": "Cleo",
+      "middle_name": null,
+      "family_name": "Marsh",
+      "preferred_given_name": null,
+      "preferred_family_name": null,
+      "title": "Staff Engineer",
+      "status": "ACTIVE",
+      "start_date": "2021-09-13",
+      "end_date": null,
+      "country": "US",
+      "employee_number": "eng1",
+      "permanent_profile_number": "Peng1",
+      "is_manager": false,
+      "timezone": "America/Los_Angeles",
+      "employment_type": {
+        "id": "et_1",
+        "type": "EMPLOYEE",
+        "label": "Employee",
+        "name": "EMPLOYEE"
+      },
+      "manager": {
+        "id": "w_cto",
+        "display_name": "Bram Okafor",
+        "work_email": "bram@example.test"
+      },
+      "department": {
+        "id": "dept_eng",
+        "name": "Engineering",
+        "reference_code": "ENG"
+      },
+      "location": {
+        "type": "WORK",
+        "id": "loc_sf",
+        "name": "San Francisco HQ",
+        "address": {
+          "type": "WORK",
+          "formatted": "1 Test Way, San Francisco",
+          "street_address": "1 Test Way",
+          "locality": "San Francisco",
+          "region": null,
+          "postal_code": "00000",
+          "country": "US"
+        }
+      },
+      "legal_entity": {
+        "id": "le_1",
+        "legal_name": "Northwind Test Ltd",
+        "country": "US",
+        "entity_level": "PRIMARY"
+      },
+      "teams": null,
+      "level": null,
+      "business_partners": [],
+      "redacted_fields": [],
+      "company_id": "co_test_1"
+    },
+    {
+      "id": "w_eng2",
+      "rippling_url": "https://app.rippling.com/people/w_eng2",
+      "work_email": "dario.vance@example.test",
+      "display_name": "Dario Vance",
+      "given_name": "Dario",
+      "middle_name": null,
+      "family_name": "Vance",
+      "preferred_given_name": null,
+      "preferred_family_name": null,
+      "title": "Senior Engineer",
+      "status": "ACTIVE",
+      "start_date": "2022-02-14",
+      "end_date": null,
+      "country": "US",
+      "employee_number": "eng2",
+      "permanent_profile_number": "Peng2",
+      "is_manager": false,
+      "timezone": "Europe/Berlin",
+      "employment_type": {
+        "id": "et_1",
+        "type": "EMPLOYEE",
+        "label": "Employee",
+        "name": "EMPLOYEE"
+      },
+      "manager": {
+        "id": "w_cto",
+        "display_name": "Bram Okafor",
+        "work_email": "bram@example.test"
+      },
+      "department": {
+        "id": "dept_eng",
+        "name": "Engineering",
+        "reference_code": "ENG"
+      },
+      "location": {
+        "type": "WORK",
+        "id": "loc_berlin",
+        "name": "Berlin Office",
+        "address": {
+          "type": "WORK",
+          "formatted": "1 Test Way, Berlin",
+          "street_address": "1 Test Way",
+          "locality": "Berlin",
+          "region": null,
+          "postal_code": "00000",
+          "country": "DE"
+        }
+      },
+      "legal_entity": {
+        "id": "le_1",
+        "legal_name": "Northwind Test Ltd",
+        "country": "US",
+        "entity_level": "PRIMARY"
+      },
+      "teams": null,
+      "level": null,
+      "business_partners": [],
+      "redacted_fields": [],
+      "company_id": "co_test_1"
+    },
+    {
+      "id": "w_plat1",
+      "rippling_url": "https://app.rippling.com/people/w_plat1",
+      "work_email": "esme.halloran@example.test",
+      "display_name": "Esme Halloran",
+      "given_name": "Esme",
+      "middle_name": null,
+      "family_name": "Halloran",
+      "preferred_given_name": "Essie",
+      "preferred_family_name": null,
+      "title": "Platform Engineer",
+      "status": "ACTIVE",
+      "start_date": "2023-06-05",
+      "end_date": null,
+      "country": "US",
+      "employee_number": "plat1",
+      "permanent_profile_number": "Pplat1",
+      "is_manager": false,
+      "timezone": "Europe/Berlin",
+      "employment_type": {
+        "id": "et_1",
+        "type": "EMPLOYEE",
+        "label": "Employee",
+        "name": "EMPLOYEE"
+      },
+      "manager": {
+        "id": "w_cto",
+        "display_name": "Bram Okafor",
+        "work_email": "bram@example.test"
+      },
+      "department": {
+        "id": "dept_platform",
+        "name": "Platform Engineering",
+        "reference_code": "PLAT"
+      },
+      "location": {
+        "type": "WORK",
+        "id": "loc_berlin",
+        "name": "Berlin Office",
+        "address": {
+          "type": "WORK",
+          "formatted": "1 Test Way, Berlin",
+          "street_address": "1 Test Way",
+          "locality": "Berlin",
+          "region": null,
+          "postal_code": "00000",
+          "country": "DE"
+        }
+      },
+      "legal_entity": {
+        "id": "le_1",
+        "legal_name": "Northwind Test Ltd",
+        "country": "US",
+        "entity_level": "PRIMARY"
+      },
+      "teams": null,
+      "level": null,
+      "business_partners": [],
+      "redacted_fields": [],
+      "company_id": "co_test_1"
+    },
+    {
+      "id": "w_cs1",
+      "rippling_url": "https://app.rippling.com/people/w_cs1",
+      "work_email": "fen.adeyemi@example.test",
+      "display_name": "Fen Adeyemi",
+      "given_name": "Fen",
+      "middle_name": null,
+      "family_name": "Adeyemi",
+      "preferred_given_name": null,
+      "preferred_family_name": null,
+      "title": "Customer Success Lead",
+      "status": "ACTIVE",
+      "start_date": "2021-11-02",
+      "end_date": null,
+      "country": "US",
+      "employee_number": "cs1",
+      "permanent_profile_number": "Pcs1",
+      "is_manager": true,
+      "timezone": "America/New_York",
+      "employment_type": {
+        "id": "et_1",
+        "type": "EMPLOYEE",
+        "label": "Employee",
+        "name": "EMPLOYEE"
+      },
+      "manager": {
+        "id": "w_ceo",
+        "display_name": "Ada Nolan",
+        "work_email": "ada@example.test"
+      },
+      "department": {
+        "id": "dept_cs",
+        "name": "Customer Success",
+        "reference_code": "CS"
+      },
+      "location": null,
+      "legal_entity": {
+        "id": "le_1",
+        "legal_name": "Northwind Test Ltd",
+        "country": "US",
+        "entity_level": "PRIMARY"
+      },
+      "teams": null,
+      "level": null,
+      "business_partners": [],
+      "redacted_fields": [],
+      "company_id": "co_test_1"
+    },
+    {
+      "id": "w_cs2",
+      "rippling_url": "https://app.rippling.com/people/w_cs2",
+      "work_email": "gia.roussel@example.test",
+      "display_name": "Gia Roussel",
+      "given_name": "Gia",
+      "middle_name": null,
+      "family_name": "Roussel",
+      "preferred_given_name": null,
+      "preferred_family_name": null,
+      "title": "Customer Success Manager",
+      "status": "ACTIVE",
+      "start_date": "2024-01-08",
+      "end_date": null,
+      "country": "US",
+      "employee_number": "cs2",
+      "permanent_profile_number": "Pcs2",
+      "is_manager": false,
+      "timezone": "America/Los_Angeles",
+      "employment_type": {
+        "id": "et_1",
+        "type": "EMPLOYEE",
+        "label": "Employee",
+        "name": "EMPLOYEE"
+      },
+      "manager": {
+        "id": "w_cs1",
+        "display_name": "Fen Adeyemi",
+        "work_email": "fen@example.test"
+      },
+      "department": {
+        "id": "dept_cs",
+        "name": "Customer Success",
+        "reference_code": "CS"
+      },
+      "location": {
+        "type": "WORK",
+        "id": "loc_sf",
+        "name": "San Francisco HQ",
+        "address": {
+          "type": "WORK",
+          "formatted": "1 Test Way, San Francisco",
+          "street_address": "1 Test Way",
+          "locality": "San Francisco",
+          "region": null,
+          "postal_code": "00000",
+          "country": "US"
+        }
+      },
+      "legal_entity": {
+        "id": "le_1",
+        "legal_name": "Northwind Test Ltd",
+        "country": "US",
+        "entity_level": "PRIMARY"
+      },
+      "teams": null,
+      "level": null,
+      "business_partners": [],
+      "redacted_fields": [],
+      "company_id": "co_test_1"
+    },
+    {
+      "id": "w_fin1",
+      "rippling_url": "https://app.rippling.com/people/w_fin1",
+      "work_email": "hal.bergström@example.test",
+      "display_name": "Hal Bergström",
+      "given_name": "Hal",
+      "middle_name": null,
+      "family_name": "Bergström",
+      "preferred_given_name": null,
+      "preferred_family_name": null,
+      "title": "Finance Contractor",
+      "status": "ACTIVE",
+      "start_date": "2023-03-20",
+      "end_date": null,
+      "country": "US",
+      "employee_number": "fin1",
+      "permanent_profile_number": "Pfin1",
+      "is_manager": false,
+      "timezone": "America/Los_Angeles",
+      "employment_type": {
+        "id": "et_1",
+        "type": "CONTRACTOR",
+        "label": "Contractor",
+        "name": "CONTRACTOR"
+      },
+      "manager": {
+        "id": "w_ceo",
+        "display_name": "Ada Nolan",
+        "work_email": "ada@example.test"
+      },
+      "department": {
+        "id": "dept_ga",
+        "name": "G&A",
+        "reference_code": "GA"
+      },
+      "location": {
+        "type": "WORK",
+        "id": "loc_sf",
+        "name": "San Francisco HQ",
+        "address": {
+          "type": "WORK",
+          "formatted": "1 Test Way, San Francisco",
+          "street_address": "1 Test Way",
+          "locality": "San Francisco",
+          "region": null,
+          "postal_code": "00000",
+          "country": "US"
+        }
+      },
+      "legal_entity": {
+        "id": "le_1",
+        "legal_name": "Northwind Test Ltd",
+        "country": "US",
+        "entity_level": "PRIMARY"
+      },
+      "teams": null,
+      "level": null,
+      "business_partners": [],
+      "redacted_fields": [],
+      "company_id": "co_test_1"
+    }
+  ],
+  "direct_reports": {
+    "w_ceo": {
+      "manager_id": "w_ceo",
+      "rippling_url": "https://app.rippling.com/people/w_ceo",
+      "total_direct_reports": 3,
+      "direct_reports": [
+        {
+          "id": "w_cto",
+          "rippling_url": "https://app.rippling.com/people/w_cto",
+          "display_name": "Bram Okafor",
+          "status": "ACTIVE",
+          "title": "Chief Technology Officer",
+          "redacted_fields": []
+        },
+        {
+          "id": "w_cs1",
+          "rippling_url": "https://app.rippling.com/people/w_cs1",
+          "display_name": "Fen Adeyemi",
+          "status": "ACTIVE",
+          "title": "Customer Success Lead",
+          "redacted_fields": []
+        },
+        {
+          "id": "w_fin1",
+          "rippling_url": "https://app.rippling.com/people/w_fin1",
+          "display_name": "Hal Bergström",
+          "status": "ACTIVE",
+          "title": "Finance Contractor",
+          "redacted_fields": []
+        }
+      ]
+    },
+    "w_cto": {
+      "manager_id": "w_cto",
+      "rippling_url": "https://app.rippling.com/people/w_cto",
+      "total_direct_reports": 3,
+      "direct_reports": [
+        {
+          "id": "w_eng1",
+          "rippling_url": "https://app.rippling.com/people/w_eng1",
+          "display_name": "Cleo Marsh",
+          "status": "ACTIVE",
+          "title": "Staff Engineer",
+          "redacted_fields": []
+        },
+        {
+          "id": "w_eng2",
+          "rippling_url": "https://app.rippling.com/people/w_eng2",
+          "display_name": "Dario Vance",
+          "status": "ACTIVE",
+          "title": "Senior Engineer",
+          "redacted_fields": []
+        },
+        {
+          "id": "w_plat1",
+          "rippling_url": "https://app.rippling.com/people/w_plat1",
+          "display_name": "Esme Halloran",
+          "status": "ACTIVE",
+          "title": "Platform Engineer",
+          "redacted_fields": []
+        }
+      ]
+    },
+    "w_cs1": {
+      "manager_id": "w_cs1",
+      "rippling_url": "https://app.rippling.com/people/w_cs1",
+      "total_direct_reports": 1,
+      "direct_reports": [
+        {
+          "id": "w_cs2",
+          "rippling_url": "https://app.rippling.com/people/w_cs2",
+          "display_name": "Gia Roussel",
+          "status": "ACTIVE",
+          "title": "Customer Success Manager",
+          "redacted_fields": []
+        }
+      ]
+    }
+  },
+  "absences": {
+    "w_ceo": {
+      "worker_id": "w_ceo",
+      "display_name": "Ada Nolan",
+      "is_on_leave": false,
+      "current_leave": null,
+      "rippling_url": "https://app.rippling.com/people/w_ceo",
+      "redacted_fields": []
+    },
+    "w_cto": {
+      "worker_id": "w_cto",
+      "display_name": "Bram Okafor",
+      "is_on_leave": false,
+      "current_leave": null,
+      "rippling_url": "https://app.rippling.com/people/w_cto",
+      "redacted_fields": []
+    },
+    "w_eng1": {
+      "worker_id": "w_eng1",
+      "display_name": "Cleo Marsh",
+      "is_on_leave": false,
+      "current_leave": null,
+      "rippling_url": "https://app.rippling.com/people/w_eng1",
+      "redacted_fields": []
+    },
+    "w_eng2": {
+      "worker_id": "w_eng2",
+      "display_name": "Dario Vance",
+      "is_on_leave": true,
+      "current_leave": {
+        "id": "leave_1",
+        "leave_type_id": "lt_vacation",
+        "leave_type_name": "Vacation",
+        "start_date": "2026-08-31",
+        "end_date": "2026-09-03",
+        "status": "APPROVED"
+      },
+      "rippling_url": "https://app.rippling.com/people/w_eng2",
+      "redacted_fields": []
+    },
+    "w_plat1": {
+      "worker_id": "w_plat1",
+      "display_name": "Esme Halloran",
+      "is_on_leave": false,
+      "current_leave": null,
+      "rippling_url": "https://app.rippling.com/people/w_plat1",
+      "redacted_fields": []
+    },
+    "w_cs1": {
+      "worker_id": "w_cs1",
+      "display_name": "Fen Adeyemi",
+      "is_on_leave": false,
+      "current_leave": null,
+      "rippling_url": "https://app.rippling.com/people/w_cs1",
+      "redacted_fields": []
+    },
+    "w_cs2": {
+      "worker_id": "w_cs2",
+      "display_name": "Gia Roussel",
+      "is_on_leave": false,
+      "current_leave": null,
+      "rippling_url": "https://app.rippling.com/people/w_cs2",
+      "redacted_fields": []
+    },
+    "w_fin1": {
+      "worker_id": "w_fin1",
+      "display_name": "Hal Bergström",
+      "is_on_leave": false,
+      "current_leave": null,
+      "rippling_url": "https://app.rippling.com/people/w_fin1",
+      "redacted_fields": []
+    }
+  },
+  "balances": {
+    "w_eng2": {
+      "worker_id": "w_eng2",
+      "balances": [
+        {
+          "id": "bal_1",
+          "leave_type_id": "lt_vacation",
+          "leave_type_name": "Vacation",
+          "is_balance_unlimited": false,
+          "balance_including_future_requests_hours": 61.5,
+          "balance_excluding_future_requests_hours": 93.5
+        }
+      ]
+    }
+  },
+  "calls": [
+    {
+      "fn": "lookup_me",
+      "args_summary": "{}",
+      "ok": true
+    },
+    {
+      "fn": "search_departments",
+      "args_summary": "{\"query\":\"\"}",
+      "ok": true
+    },
+    {
+      "fn": "search_work_locations",
+      "args_summary": "{\"query\":\"\"}",
+      "ok": true
+    },
+    {
+      "fn": "search_leave_types",
+      "args_summary": "{\"query\":\"\"}",
+      "ok": true
+    },
+    {
+      "fn": "search_teams",
+      "args_summary": "{\"query\":\"\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_person",
+      "args_summary": "{\"worker_id\":\"w_ceo\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_absence",
+      "args_summary": "{\"worker_id\":\"w_ceo\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_person",
+      "args_summary": "{\"worker_id\":\"w_cto\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_absence",
+      "args_summary": "{\"worker_id\":\"w_cto\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_person",
+      "args_summary": "{\"worker_id\":\"w_eng1\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_absence",
+      "args_summary": "{\"worker_id\":\"w_eng1\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_person",
+      "args_summary": "{\"worker_id\":\"w_eng2\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_absence",
+      "args_summary": "{\"worker_id\":\"w_eng2\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_person",
+      "args_summary": "{\"worker_id\":\"w_plat1\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_absence",
+      "args_summary": "{\"worker_id\":\"w_plat1\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_person",
+      "args_summary": "{\"worker_id\":\"w_cs1\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_absence",
+      "args_summary": "{\"worker_id\":\"w_cs1\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_person",
+      "args_summary": "{\"worker_id\":\"w_cs2\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_absence",
+      "args_summary": "{\"worker_id\":\"w_cs2\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_person",
+      "args_summary": "{\"worker_id\":\"w_fin1\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_absence",
+      "args_summary": "{\"worker_id\":\"w_fin1\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_direct_reports",
+      "args_summary": "{\"worker_id\":\"w_ceo\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_direct_reports",
+      "args_summary": "{\"worker_id\":\"w_cto\"}",
+      "ok": true
+    },
+    {
+      "fn": "lookup_direct_reports",
+      "args_summary": "{\"worker_id\":\"w_cs1\"}",
+      "ok": true
+    }
+  ]
+}

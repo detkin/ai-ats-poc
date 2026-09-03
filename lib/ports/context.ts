@@ -14,7 +14,14 @@
  * Spec: docs/SPEC.md §9 (runs as a real user, never elevates); docs/PLAN.md §2.3.
  */
 
-export const ADAPTER_MODES = ['fixture', 'rippling'] as const;
+/**
+ * `fixture` — the committed synthetic tenant, no network (the default).
+ * `rippling`  — direct Rippling calls; stubs until a REST token exists (D25).
+ * `bridge`    — Tier-1 data the *agent* fetched from the Rippling MCP and imported with
+ *               `bin/bridge.mjs import`; the fixture port classes read it from
+ *               `TL_DATA_DIR/tier1` (docs/PLAN.md §8, D25–D27).
+ */
+export const ADAPTER_MODES = ['fixture', 'rippling', 'bridge'] as const;
 export type AdapterMode = (typeof ADAPTER_MODES)[number];
 
 /**

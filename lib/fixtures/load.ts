@@ -28,14 +28,12 @@ import {
   ABSENCE_STATUSES,
   APPLICATION_STATUSES,
   CANDIDATE_SOURCES,
-  COUNTRIES,
   CURRENCIES,
   EMPLOYMENT_TYPES,
   HEADCOUNT_POSITION_STATUSES,
   IDENTITY_ROLES,
   JOB_FUNCTIONS,
   LEVEL_TRACKS,
-  LOCATION_GROUPS,
   REQUISITION_STATUSES,
   WORKER_STATUSES,
 } from '#lib/types/tier1.ts';
@@ -233,6 +231,19 @@ function checkEnum(
   }
 }
 
+/** A short uppercase code (`US`, `IN`, `DE`, `LT`) — the shape of a country/group key. */
+function checkCode(file: string, rows: readonly Row[], field: string, problems: string[]): void {
+  for (const row of rows) {
+    const value = row[field];
+    if (typeof value !== 'string' || !/^[A-Z][A-Z0-9_-]{0,15}$/.test(value)) {
+      problems.push(
+        `${file}: ${String(row.id)} has ${field} "${String(value)}" which is not an ` +
+          'uppercase code (e.g. US, IN, DE)',
+      );
+    }
+  }
+}
+
 /** `nullable` allows an explicitly `null` reference (e.g. `manager_id`). */
 function checkRef(
   file: string,
@@ -276,8 +287,11 @@ function validate(bundle: TenantBundle, problems: string[]): void {
   const leaveTypeIds = ids(rowsOf('leave_types'));
 
   checkEnum('levels.json', rowsOf('levels'), 'track', LEVEL_TRACKS, problems);
-  checkEnum('locations.json', rowsOf('locations'), 'country', COUNTRIES, problems);
-  checkEnum('locations.json', rowsOf('locations'), 'location_group', LOCATION_GROUPS, problems);
+  // `country` and `location_group` are free strings, not enums: a bridged tenant
+  // (docs/PLAN.md §8) has DE and LT locations that no fixture catalogue lists. The shape is
+  // still checked — an ISO-3166 alpha-2 style code — so a typo is not silently accepted.
+  checkCode('locations.json', rowsOf('locations'), 'country', problems);
+  checkCode('locations.json', rowsOf('locations'), 'location_group', problems);
 
   const workers = rowsOf('workers');
   checkEnum('workers.json', workers, 'job_function', JOB_FUNCTIONS, problems);
@@ -290,9 +304,12 @@ function validate(bundle: TenantBundle, problems: string[]): void {
   checkRef('workers.json', workers, 'manager_id', workerIds, 'worker', problems, {
     nullable: true,
   });
+  // `compensation` is optional (docs/PLAN.md §8): the Rippling MCP redacts pay, so a bridged
+  // tenant has none. When it is present it must still be a whole, legal figure.
   for (const worker of workers) {
     const comp = worker.compensation as Row | undefined;
-    if (!comp || typeof comp.base_annual !== 'number') {
+    if (comp === undefined || comp === null) continue;
+    if (typeof comp.base_annual !== 'number') {
       problems.push(`workers.json: ${String(worker.id)} has no numeric compensation.base_annual`);
     } else if (!CURRENCIES.includes(comp.currency as never)) {
       problems.push(`workers.json: ${String(worker.id)} has illegal currency`);
@@ -312,7 +329,7 @@ function validate(bundle: TenantBundle, problems: string[]): void {
 
   const bands = rowsOf('comp_bands');
   checkEnum('comp_bands.json', bands, 'job_function', JOB_FUNCTIONS, problems);
-  checkEnum('comp_bands.json', bands, 'location_group', LOCATION_GROUPS, problems);
+  checkCode('comp_bands.json', bands, 'location_group', problems);
   checkEnum('comp_bands.json', bands, 'currency', CURRENCIES, problems);
   checkRef('comp_bands.json', bands, 'level_id', levelIds, 'level', problems);
   for (const band of bands) {
@@ -470,10 +487,13 @@ function validate(bundle: TenantBundle, problems: string[]): void {
   const locationGroup = new Map(
     rowsOf('locations').map((row) => [String(row.id), String(row.location_group)]),
   );
-  for (const worker of workers) {
-    const key = `${String(worker.level_id)}|${String(worker.job_function)}|${locationGroup.get(String(worker.location_id)) ?? '?'}`;
-    if (!bandKeys.has(key)) {
-      problems.push(`comp_bands.json: no band covers ${String(worker.id)} (${key})`);
+  // A tenant with no bands at all is a bridged tenant, not a broken one: bands are REST-only.
+  if (bands.length > 0) {
+    for (const worker of workers) {
+      const key = `${String(worker.level_id)}|${String(worker.job_function)}|${locationGroup.get(String(worker.location_id)) ?? '?'}`;
+      if (!bandKeys.has(key)) {
+        problems.push(`comp_bands.json: no band covers ${String(worker.id)} (${key})`);
+      }
     }
   }
   if (bandIds.size !== bands.length) problems.push('comp_bands.json: duplicate band ids');

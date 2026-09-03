@@ -12,6 +12,7 @@ import { flagsOf } from '#lib/cli/args.ts';
 import type { Args, CliSpec } from '#lib/cli/args.ts';
 import type { CliOutput } from '#lib/cli/output.ts';
 import { AUDIT_SPEC, runAudit } from '#lib/cli/audit.ts';
+import { BRIDGE_SPEC, runBridge } from '#lib/cli/bridge.ts';
 import { CYCLE_SPEC, runCycle } from '#lib/cli/cycle.ts';
 import { DECIDE_SPEC, runDecide } from '#lib/cli/decide.ts';
 import { DOCTOR_SPEC, runDoctor } from '#lib/cli/doctor.ts';
@@ -34,6 +35,7 @@ const CLIS: [CliSpec, (args: Args) => Promise<CliOutput>][] = [
   [VERIFY_SPEC, runVerify],
   [SEED_SPEC, runSeed],
   [DOCTOR_SPEC, runDoctor],
+  [BRIDGE_SPEC, runBridge],
 ];
 
 for (const [spec, handler] of CLIS) {

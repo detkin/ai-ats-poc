@@ -56,11 +56,19 @@ export type Currency = (typeof CURRENCIES)[number];
 export const LEVEL_TRACKS = ['IC', 'M', 'E'] as const;
 export type LevelTrack = (typeof LEVEL_TRACKS)[number];
 
+/** The countries the fixture tenant uses. A real tenant may hold any ISO-3166 alpha-2 code. */
 export const COUNTRIES = ['US', 'IN'] as const;
-export type Country = (typeof COUNTRIES)[number];
+/**
+ * ISO-3166 alpha-2. Deliberately `string`, not a union: the live Rippling tenant has
+ * locations in DE and LT (docs/testing/live-rippling.md), and a bridged tenant must not
+ * fail to load because a country is not in the fixture catalogue.
+ */
+export type Country = string;
 
+/** The comp-band location groups the fixture tenant uses. */
 export const LOCATION_GROUPS = ['US', 'IN'] as const;
-export type LocationGroup = (typeof LOCATION_GROUPS)[number];
+/** A band's geography key. `string` for the same reason as `Country`. */
+export type LocationGroup = string;
 
 export const HEADCOUNT_POSITION_STATUSES = ['PLANNED', 'OPEN', 'FILLED'] as const;
 export type HeadcountPositionStatus = (typeof HEADCOUNT_POSITION_STATUSES)[number];
@@ -107,13 +115,19 @@ export interface Worker {
   status: WorkerStatus;
   slack_user_id: string;
   timezone: string;
-  compensation: Compensation;
+  /**
+   * Optional: the Rippling MCP redacts pay, so a bridged tenant has none
+   * (docs/PLAN.md §8, D27). Fixtures always set it.
+   */
+  compensation?: Compensation;
 }
 
 export interface Department {
   id: DepartmentId;
   name: string;
   head_worker_id: WorkerId;
+  /** Rippling departments nest (`parent_id`); the fixture catalogue is flat. */
+  parent_department_id?: DepartmentId | null;
 }
 
 export interface Team {

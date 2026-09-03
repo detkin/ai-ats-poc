@@ -91,8 +91,11 @@ export function compaRatios(inputs: CalibrationInputs): Map<WorkerId, CompaRow> 
     const group = locationGroup.get(worker.location_id);
     if (group === undefined) continue;
     const band = bands.get(bandKey(worker.level_id, worker.job_function, group));
-    if (band === undefined || band.currency !== worker.compensation.currency) continue;
-    const base = worker.compensation.base_annual;
+    // No `compensation` at all means a bridged tenant: the MCP redacts pay (docs/PLAN.md §8).
+    const compensation = worker.compensation;
+    if (compensation === undefined) continue;
+    if (band === undefined || band.currency !== compensation.currency) continue;
+    const base = compensation.base_annual;
     rows.set(worker.id, {
       worker_id: worker.id,
       band_id: band.id,
@@ -224,6 +227,22 @@ export function bandSection(
   compa: Map<WorkerId, CompaRow>,
   book: CitationBook,
 ): string[] {
+  // A tenant with no comp bands at all is a bridged one — the Rippling MCP redacts pay and
+  // bands are REST-only (docs/PLAN.md §8, docs/testing/live-rippling.md). Say so, once, and
+  // cite nothing: a table of zeroes would read as "everybody is at 0.000 of band".
+  if (inputs.bands.length === 0) {
+    const token = book.add('band.unavailable', 'derived', [['cycles', [inputs.cycle.id]]]);
+    return [
+      '## 2. Compa-ratio against band, by department',
+      '',
+      `Compensation not available via MCP ${token}`,
+      '',
+      'The Rippling MCP redacts pay and compensation bands are REST-only, so this run read',
+      'no salary and no band for anybody. No compa-ratio is stated here, and none is implied.',
+      '',
+    ];
+  }
+
   const lines = [
     '## 2. Compa-ratio against band, by department',
     '',

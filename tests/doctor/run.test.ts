@@ -114,8 +114,8 @@ describe('runDoctor — healthy checkout', () => {
 
     expect(report.ok).toBe(true);
     expect(report.summary.fail).toBe(0);
-    expect(report.checks).toHaveLength(9);
-    expect(report.summary.ok + report.summary.warn + report.summary.fail).toBe(9);
+    expect(report.checks).toHaveLength(10);
+    expect(report.summary.ok + report.summary.warn + report.summary.fail).toBe(10);
     expect(statusOf(report.checks, 'node_version')).toBe('ok');
     expect(statusOf(report.checks, 'adapter_mode')).toBe('ok');
     expect(statusOf(report.checks, 'clock')).toBe('ok');
@@ -123,6 +123,7 @@ describe('runDoctor — healthy checkout', () => {
     expect(statusOf(report.checks, 'loop_states')).toBe('ok');
     expect(statusOf(report.checks, 'fixtures_seeded')).toBe('ok');
     expect(statusOf(report.checks, 'runtime_state')).toBe('ok');
+    expect(statusOf(report.checks, 'tier1_snapshot')).toBe('ok');
     expect(statusOf(report.checks, 'write_dirs')).toBe('ok');
     expect(byId(report.checks, 'tenant_policy').detail).toContain('Acme Robotics');
     expect(byId(report.checks, 'clock').detail).toContain(ANCHOR.replace('Z', '.000Z'));
@@ -143,6 +144,7 @@ describe('runDoctor — healthy checkout', () => {
       'loop_states',
       'fixtures_seeded',
       'runtime_state',
+      'tier1_snapshot',
       'mcp_servers',
       'write_dirs',
     ]);
@@ -300,11 +302,41 @@ describe('mcp_servers check', () => {
     expect(check.status).toBe('warn');
   });
 
-  it('fails in rippling mode while the rippling entry is a placeholder', async () => {
+  /**
+   * The committed `.mcp.json` gained a real Rippling gateway URL in M2.5, so this now takes
+   * the `warn` branch: Rippling is connected, Slack and Google Calendar are still
+   * placeholders. The `fail` branch is asserted below against a synthetic config.
+   */
+  it('warns in rippling mode when rippling is connected but the others are placeholders', async () => {
     const config = configWith({ TL_ADAPTER: 'rippling' });
     const check = await checkMcpServers(config);
-    expect(check.status).toBe('fail');
-    expect(check.detail).toContain('placeholder');
+    expect(check.status).toBe('warn');
+    expect(check.detail).toContain('configured: rippling');
+    expect(check.detail).toContain('placeholder: slack, google-calendar');
+  });
+
+  it('fails outside fixture mode when the rippling entry itself is a placeholder', async () => {
+    const repoRoot = makeTempDir('tl-doctor-mcp-');
+    writeFileSync(
+      path.join(repoRoot, '.mcp.json'),
+      JSON.stringify({
+        mcpServers: {
+          rippling: { type: 'http', url: 'https://example.invalid/mcp', _placeholder: true },
+          slack: { type: 'http', url: 'https://example.invalid/mcp', _placeholder: true },
+          'google-calendar': {
+            type: 'http',
+            url: 'https://example.invalid/mcp',
+            _placeholder: true,
+          },
+        },
+      }),
+      'utf8',
+    );
+    for (const adapter of ['rippling', 'bridge'] as const) {
+      const check = await checkMcpServers({ ...configWith({ TL_ADAPTER: adapter }), repoRoot });
+      expect(check.status, `${adapter} should fail on a placeholder rippling entry`).toBe('fail');
+      expect(check.detail).toContain('placeholder');
+    }
   });
 });
 
@@ -320,5 +352,98 @@ describe('adapter_mode check', () => {
     const check = byId((await runDoctor(config)).checks, 'adapter_mode');
     expect(check.status).toBe('warn');
     expect(check.detail).toContain('stubs only until a tenant is connected');
+  });
+});
+
+/**
+ * `tier1_snapshot` (block B2.6). On `bridge` the imported tenant *is* the run's data, so a
+ * missing one is fatal and a stale one silently ticks yesterday's org chart. In every other
+ * mode it is `ok` + "n/a", which keeps the report the same shape everywhere.
+ */
+describe('tier1_snapshot check', () => {
+  /** A data dir holding a bridged tenant's provenance file, dated `fetchedAt`. */
+  function makeBridgedDataDir(fetchedAt: string): string {
+    const dir = makeSeededDataDir();
+    mkdirSync(path.join(dir, 'tier1'), { recursive: true });
+    writeFileSync(
+      path.join(dir, 'tier1', 'provenance.json'),
+      JSON.stringify({
+        source: 'rippling-mcp',
+        fetched_at: fetchedAt,
+        actor_worker_id: 'w_ceo',
+        company_id: 'co_test_1',
+        counts: { workers: 8, departments: 4 },
+        calls: [],
+        mapping_version: '1',
+        warnings: [],
+      }),
+      'utf8',
+    );
+    return dir;
+  }
+
+  it('is n/a and ok in fixture mode', async () => {
+    const config = configWith({
+      TL_FIXTURES_DIR: makeFixturesDir().dir,
+      TL_TENANT_DIR: REAL_TENANT_DIR,
+      TL_DATA_DIR: makeSeededDataDir(),
+    });
+    const check = byId((await runDoctor(config)).checks, 'tier1_snapshot');
+    expect(check.status).toBe('ok');
+    expect(check.detail).toContain('n/a');
+  });
+
+  it('fails in bridge mode with nothing imported, and names the import command', async () => {
+    const config = configWith({
+      TL_ADAPTER: 'bridge',
+      TL_FIXTURES_DIR: makeFixturesDir().dir,
+      TL_TENANT_DIR: REAL_TENANT_DIR,
+      TL_DATA_DIR: makeSeededDataDir(),
+    });
+    const report = await runDoctor(config);
+    const check = byId(report.checks, 'tier1_snapshot');
+    expect(check.status).toBe('fail');
+    expect(check.fix).toContain('bin/bridge.mjs import');
+    expect(report.ok).toBe(false);
+  });
+
+  it('is ok, with counts, on a freshly imported tenant', async () => {
+    const config = configWith({
+      TL_ADAPTER: 'bridge',
+      TL_FIXTURES_DIR: makeFixturesDir().dir,
+      TL_TENANT_DIR: REAL_TENANT_DIR,
+      TL_DATA_DIR: makeBridgedDataDir('2026-09-02T15:40:00Z'),
+    });
+    const check = byId((await runDoctor(config)).checks, 'tier1_snapshot');
+    expect(check.status).toBe('ok');
+    expect(check.detail).toContain('workers 8');
+    expect(check.detail).toContain('rippling-mcp');
+  });
+
+  it('warns once the snapshot is older than cadence.tick_interval_hours', async () => {
+    const config = configWith({
+      TL_ADAPTER: 'bridge',
+      TL_FIXTURES_DIR: makeFixturesDir().dir,
+      TL_TENANT_DIR: REAL_TENANT_DIR,
+      TL_DATA_DIR: makeBridgedDataDir('2026-08-29T16:00:00Z'),
+    });
+    const report = await runDoctor(config);
+    const check = byId(report.checks, 'tier1_snapshot');
+    expect(check.status).toBe('warn');
+    expect(check.detail).toContain('tick_interval_hours');
+    // A stale snapshot is a warning, not a refusal: the operator decides.
+    expect(report.ok).toBe(true);
+  });
+
+  it('reports bridge mode as a healthy adapter, not a stub', async () => {
+    const config = configWith({
+      TL_ADAPTER: 'bridge',
+      TL_FIXTURES_DIR: makeFixturesDir().dir,
+      TL_TENANT_DIR: REAL_TENANT_DIR,
+      TL_DATA_DIR: makeBridgedDataDir('2026-09-02T15:40:00Z'),
+    });
+    const check = byId((await runDoctor(config)).checks, 'adapter_mode');
+    expect(check.status).toBe('ok');
+    expect(check.detail).toContain('imported');
   });
 });

@@ -36,6 +36,12 @@ The engine stays silent outside the recipient's working hours in their own locat
 their location's public holidays (`quiet_hours.holidays: true`). Quiet hours defer a nudge; they
 do not move a due date and they do not skip an attempt.
 
+A location that carries no hours or timezone of its own falls back to the tenant defaults:
+`quiet_hours.default_work_hours.start: 09:00` to `quiet_hours.default_work_hours.end: 18:00`, in
+`quiet_hours.default_timezone: America/Los_Angeles`. This is not hypothetical — Rippling's work
+locations are an address and nothing else, so a `TL_ADAPTER=bridge` run (`modes/live-run.md`)
+leans on these for every location whose people do not agree on a timezone.
+
 ## Channels
 
 - Nudges go by Slack DM (`channels.nudge: slack_dm`).

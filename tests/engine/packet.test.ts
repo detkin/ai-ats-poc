@@ -131,7 +131,7 @@ describe('assembleCalibration: neutrality and PII', () => {
   });
 
   it('carries no pay amounts — only compa-ratios', () => {
-    const amounts = new Set(opened.bundle.workers.map((w) => String(w.compensation.base_annual)));
+    const amounts = new Set(opened.bundle.workers.map((w) => String(w.compensation?.base_annual)));
     const found = [...amounts].filter((amount) => packet.body_md.includes(amount));
     expect(found).toEqual([]);
     expect(packet.body_md).toMatch(/compa-ratio/i);

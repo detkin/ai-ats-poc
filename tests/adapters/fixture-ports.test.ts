@@ -127,7 +127,7 @@ describe('FixtureBandsAdapter', () => {
       location_group: 'US',
     });
     expect(band).not.toBeNull();
-    expect(comp.compa_ratio).toBe(compaRatio(comp.base_annual, band?.mid ?? 0));
+    expect(comp.compa_ratio).toBe(compaRatio(comp.base_annual ?? 0, band?.mid ?? 0));
     // w_0024 is one of the pinned above-band workers (fixtures/README.md).
     expect(comp.compa_ratio ?? 0).toBeGreaterThan(1);
   });

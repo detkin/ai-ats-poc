@@ -1,12 +1,22 @@
 # `lib/adapters` — the seam between the engine and the world
 
 The engine (block B1.1) is pure. Everything that touches a file, a tenant or a person happens
-here, behind the seven ports in `lib/ports/`. Two families implement them:
+here, behind the seven ports in `lib/ports/`. Three modes select them:
 
-| Family                     | `TL_ADAPTER` | State                                                              |
-| -------------------------- | ------------ | ------------------------------------------------------------------ |
-| `lib/adapters/fixture/**`  | `fixture`    | Complete. Runs the demos end to end with no network (the default). |
-| `lib/adapters/rippling/**` | `rippling`   | Stubs with the real call names; every method throws.               |
+| Family                     | `TL_ADAPTER` | State                                                                   |
+| -------------------------- | ------------ | ----------------------------------------------------------------------- |
+| `lib/adapters/fixture/**`  | `fixture`    | Complete. Runs the demos end to end with no network (the default).      |
+| `lib/adapters/rippling/**` | `rippling`   | Stubs with the real call names; every method throws.                    |
+| `lib/adapters/bridge/**`   | `bridge`     | **Not a third port family** — a data path. It maps a Rippling MCP       |
+|                            |              | snapshot the _agent_ fetched into `TL_DATA_DIR/tier1`, then hands it to |
+|                            |              | the fixture port classes above, unchanged.                              |
+
+The bridge exists because the Rippling MCP is agent-executed: its OAuth token lives in the
+Claude client, so `bin/*.mjs` cannot call it (`docs/DECISIONS.md` D25). `node bin/bridge.mjs
+fetch-plan` prints the `codemode.*` calls to run; `import --from <snapshot.json>` validates,
+maps and writes. Because the ports are the same objects in both modes, the engine cannot tell
+a real tenant from a fixture one — and the mapping's compromises (no pay, no dated absence, no
+teams or levels) are recorded as warnings in `tier1/provenance.json` rather than hidden.
 
 Nothing outside this directory constructs a port. Callers ask for a runtime:
 

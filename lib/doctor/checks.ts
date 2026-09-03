@@ -15,8 +15,8 @@
  *   CHECKS                           -- the ordered check functions
  *   EXPECTED_MCP_SERVERS, MCP_CONFIG_FILENAME
  *   checkNodeVersion, checkAdapterMode, checkClock, checkTenantPolicy,
- *   checkLoopStates, checkFixturesSeeded, checkRuntimeState, checkMcpServers,
- *   checkWriteDirs
+ *   checkLoopStates, checkFixturesSeeded, checkRuntimeState, checkTier1Snapshot,
+ *   checkMcpServers, checkWriteDirs
  *
  * Severity rule: `fail` means a tick would be wrong or impossible (template policy,
  * corrupt fixtures, unreadable states contract). `warn` means a demo path is not
@@ -29,6 +29,7 @@ import { access, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import type { Config } from '#lib/config.ts';
 import { ENV_KEYS } from '#lib/config.ts';
+import { provenancePath, readProvenance } from '#lib/adapters/bridge/index.ts';
 import { isTemplatePolicy, loadPolicy, POLICY_FILENAME, PolicyError } from '#lib/policy/index.ts';
 import { loadLoopStates, LoopStatesError, MACHINE_NAMES } from '#lib/states/index.ts';
 
@@ -47,6 +48,9 @@ export type CheckFn = (config: Config) => Promise<Check>;
 
 /** Minimum Node major version (native TypeScript stripping; DECISIONS D1). */
 const MIN_NODE_MAJOR = 24;
+
+/** Used only when the policy itself will not load; the policy check reports that separately. */
+const DEFAULT_TICK_INTERVAL_HOURS = 24;
 
 /** MCP servers the demo expects to see declared. */
 export const EXPECTED_MCP_SERVERS = ['rippling', 'slack', 'google-calendar'] as const;
@@ -108,10 +112,20 @@ export async function checkNodeVersion(_config: Config): Promise<Check> {
   return ok('node_version', `Node v${version} (>= ${MIN_NODE_MAJOR})`);
 }
 
-/** Which port family the runtime would bind. `rippling` is stubs until a tenant exists. */
+/**
+ * Which port family the runtime would bind. `rippling` is stubs until a tenant exists;
+ * `bridge` is the fixture ports over imported Tier-1 data (docs/PLAN.md §8).
+ */
 export async function checkAdapterMode(config: Config): Promise<Check> {
   if (config.adapter === 'fixture') {
     return ok('adapter_mode', `fixture adapters (${ENV_KEYS.adapter}=fixture) — no network needed`);
+  }
+  if (config.adapter === 'bridge') {
+    return ok(
+      'adapter_mode',
+      `bridge adapters (${ENV_KEYS.adapter}=bridge) — the fixture ports over the Tier-1 ` +
+        'tenant the agent imported; still no network from Node',
+    );
   }
   return warn(
     'adapter_mode',
@@ -404,6 +418,63 @@ export async function checkWriteDirs(config: Config): Promise<Check> {
   return ok('write_dirs', `${targets.map((t) => t.label).join(' and ')} exist and are writable`);
 }
 
+/**
+ * On `bridge`, the imported Tier-1 tenant is the run's data: a missing one is fatal, and a
+ * stale one silently ticks yesterday's org chart. In every other mode this is `ok` + "n/a",
+ * so the report always has the same number of rows.
+ */
+export async function checkTier1Snapshot(config: Config): Promise<Check> {
+  if (config.adapter !== 'bridge') {
+    return ok(
+      'tier1_snapshot',
+      `n/a — ${ENV_KEYS.adapter}=${config.adapter} reads Tier 1 elsewhere`,
+    );
+  }
+
+  const provenance = readProvenance(config.dataDir);
+  if (provenance === null) {
+    return fail(
+      'tier1_snapshot',
+      `no imported tenant at ${provenancePath(config.dataDir)}`,
+      'node bin/bridge.mjs fetch-plan   # then: node bin/bridge.mjs import --from <snapshot.json>',
+    );
+  }
+
+  const counts = Object.entries(provenance.counts)
+    .map(([key, value]) => `${key} ${value}`)
+    .join(', ');
+  const fetchedMs = Date.parse(provenance.fetched_at);
+  if (Number.isNaN(fetchedMs)) {
+    return warn(
+      'tier1_snapshot',
+      `imported tenant has an unreadable fetched_at ("${provenance.fetched_at}"); ${counts}`,
+      'node bin/bridge.mjs import --from <snapshot.json>  # re-import with a valid ISO fetched_at',
+    );
+  }
+
+  let intervalHours = DEFAULT_TICK_INTERVAL_HOURS;
+  try {
+    intervalHours = loadPolicy(path.join(config.tenantDir, POLICY_FILENAME)).cadence
+      .tick_interval_hours;
+  } catch {
+    // The tenant_policy check already reports a broken policy; fall back to the default here.
+  }
+  const ageHours = (config.now.getTime() - fetchedMs) / 3_600_000;
+  if (ageHours > intervalHours) {
+    return warn(
+      'tier1_snapshot',
+      `imported tenant is ${ageHours.toFixed(1)} h old (> cadence.tick_interval_hours ` +
+        `${intervalHours}); ${counts}`,
+      'node bin/bridge.mjs fetch-plan   # re-fetch, then import again',
+    );
+  }
+  return ok(
+    'tier1_snapshot',
+    `imported ${provenance.fetched_at} (${ageHours.toFixed(1)} h ago) from ` +
+      `${provenance.source}: ${counts}`,
+  );
+}
+
 /** Report order. `bin/doctor.mjs` prints them in exactly this sequence. */
 export const CHECK_IDS = [
   'node_version',
@@ -413,6 +484,7 @@ export const CHECK_IDS = [
   'loop_states',
   'fixtures_seeded',
   'runtime_state',
+  'tier1_snapshot',
   'mcp_servers',
   'write_dirs',
 ] as const;
@@ -425,6 +497,7 @@ export const CHECKS: readonly CheckFn[] = [
   checkLoopStates,
   checkFixturesSeeded,
   checkRuntimeState,
+  checkTier1Snapshot,
   checkMcpServers,
   checkWriteDirs,
 ];

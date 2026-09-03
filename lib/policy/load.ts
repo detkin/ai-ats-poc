@@ -216,17 +216,7 @@ export function validatePolicy(obj: unknown): { ok: boolean; errors: string[] } 
     checkNumber(cadence, 'cadence.', 'max_attempts', { min: 1 }, errors);
   }
 
-  const quiet = section(
-    obj,
-    'quiet_hours',
-    ['respect_location_hours', 'weekends', 'holidays'],
-    errors,
-  );
-  if (quiet) {
-    checkBoolean(quiet, 'quiet_hours.', 'respect_location_hours', errors);
-    checkBoolean(quiet, 'quiet_hours.', 'weekends', errors);
-    checkBoolean(quiet, 'quiet_hours.', 'holidays', errors);
-  }
+  validateQuietHours(obj, errors);
 
   const channels = section(
     obj,
@@ -282,6 +272,48 @@ export function validatePolicy(obj: unknown): { ok: boolean; errors: string[] } 
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+/** `HH:MM`, 24-hour clock. */
+const HHMM = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+/** `Area/Location`-shaped IANA zone. Not a lookup — `Intl` rejects a bad one at use time. */
+const IANA_ZONE = /^[A-Za-z][A-Za-z0-9_+-]*(?:\/[A-Za-z0-9_+-]+)+$/;
+
+function validateQuietHours(root: Record<string, unknown>, errors: string[]): void {
+  const quiet = section(
+    root,
+    'quiet_hours',
+    ['respect_location_hours', 'weekends', 'holidays', 'default_work_hours', 'default_timezone'],
+    errors,
+  );
+  if (!quiet) return;
+  checkBoolean(quiet, 'quiet_hours.', 'respect_location_hours', errors);
+  checkBoolean(quiet, 'quiet_hours.', 'weekends', errors);
+  checkBoolean(quiet, 'quiet_hours.', 'holidays', errors);
+
+  const zone = checkString(quiet, 'quiet_hours.', 'default_timezone', errors);
+  if (zone !== null && !IANA_ZONE.test(zone)) {
+    errors.push(
+      `quiet_hours.default_timezone must be an IANA zone like 'America/Los_Angeles' (got '${zone}')`,
+    );
+  }
+
+  const hours = section(quiet, 'default_work_hours', ['start', 'end'], errors);
+  if (!hours) return;
+  const prefix = 'quiet_hours.default_work_hours.';
+  const start = checkString(hours, prefix, 'start', errors);
+  const end = checkString(hours, prefix, 'end', errors);
+  for (const [key, value] of [
+    ['start', start],
+    ['end', end],
+  ] as const) {
+    if (value !== null && !HHMM.test(value)) {
+      errors.push(`${prefix}${key} must be HH:MM on a 24-hour clock (got '${value}')`);
+    }
+  }
+  if (start !== null && end !== null && HHMM.test(start) && HHMM.test(end) && start >= end) {
+    errors.push(`${prefix}start (${start}) must be earlier than ${prefix}end (${end})`);
+  }
 }
 
 function validateReviewCycle(root: Record<string, unknown>, errors: string[]): void {

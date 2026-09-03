@@ -55,6 +55,11 @@ export class FixtureBandsAdapter implements BandsPort {
     if (worker === undefined) {
       throw new TalentLoopsError('WORKER_NOT_FOUND', `no worker "${workerId}" in the fixtures`);
     }
+    const compensation = worker.compensation;
+    if (compensation === undefined) {
+      // A bridged tenant: the MCP redacts pay (docs/PLAN.md §8). Nulls, never a zero.
+      return { base_annual: null, currency: null, band_id: null, compa_ratio: null };
+    }
     const location = this.bundle.locations.find((l) => l.id === worker.location_id);
     const band =
       location === undefined
@@ -67,11 +72,10 @@ export class FixtureBandsAdapter implements BandsPort {
           );
 
     return {
-      base_annual: worker.compensation.base_annual,
-      currency: worker.compensation.currency,
+      base_annual: compensation.base_annual,
+      currency: compensation.currency,
       band_id: band === undefined ? null : band.id,
-      compa_ratio:
-        band === undefined ? null : compaRatio(worker.compensation.base_annual, band.mid),
+      compa_ratio: band === undefined ? null : compaRatio(compensation.base_annual, band.mid),
     };
   }
 }

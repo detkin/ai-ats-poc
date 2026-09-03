@@ -119,7 +119,7 @@ describe('bin/doctor.mjs --json', () => {
 
     expect(report.ok).toBe(true);
     expect(report.summary.fail).toBe(0);
-    expect(report.checks).toHaveLength(9);
+    expect(report.checks).toHaveLength(10);
     expect(report.checks.map((check) => check.id)).toContain('fixtures_seeded');
     for (const check of report.checks) {
       expect(typeof check.id).toBe('string');

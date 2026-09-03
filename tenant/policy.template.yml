@@ -33,6 +33,13 @@ quiet_hours:
   weekends: true
   # Never nudge on a holiday for the recipient's location.
   holidays: true
+  # Working window used when a location carries no hours of its own. HH:MM, start < end.
+  # Rippling work locations have an address and nothing else (DECISIONS D27).
+  default_work_hours:
+    start: '09:00'
+    end: '18:00'
+  # IANA zone used when neither the location nor the people at it supply one.
+  default_timezone: America/Los_Angeles
 
 channels:
   # Where routine task nudges go: slack_dm | slack_channel.

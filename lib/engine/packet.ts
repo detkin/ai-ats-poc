@@ -122,8 +122,8 @@ export function calibrationInputsHash(inputs: CalibrationInputs): string {
         w.manager_id,
         w.start_date,
         w.status,
-        w.compensation.base_annual,
-        w.compensation.currency,
+        w.compensation?.base_annual ?? null,
+        w.compensation?.currency ?? null,
       ]),
     bands: [...inputs.bands]
       .sort((a, b) => (a.id < b.id ? -1 : 1))

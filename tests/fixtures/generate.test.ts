@@ -239,8 +239,9 @@ describe('scenario requirement: comp bands', () => {
       );
       expect(band).toBeDefined();
       if (!band) continue;
-      if (worker.compensation.base_annual < band.min) below.push(worker.id);
-      if (worker.compensation.base_annual > band.max) above.push(worker.id);
+      const base = worker.compensation?.base_annual ?? 0;
+      if (base < band.min) below.push(worker.id);
+      if (base > band.max) above.push(worker.id);
     }
     expect(below).toEqual([...PINNED.below_band].sort());
     expect(above).toEqual([...PINNED.above_band].sort());

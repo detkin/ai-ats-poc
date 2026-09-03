@@ -21,6 +21,12 @@ quiet_hours:
   respect_location_hours: true
   weekends: true
   holidays: true
+  # Fallbacks for a location that carries neither (the Rippling MCP gives locations an
+  # address and nothing else — see docs/testing/live-rippling.md, DECISIONS D27).
+  default_work_hours:
+    start: '09:00'
+    end: '18:00'
+  default_timezone: America/Los_Angeles
 
 channels:
   nudge: slack_dm
