@@ -259,8 +259,8 @@ function validate(bundle: TenantBundle, problems: string[]): void {
   const rowsOf = (key: Tier1FileKey): Row[] => bundle[key] as unknown as Row[];
 
   for (const [key, file] of Object.entries(TIER1_FILES) as [Tier1FileKey, string][]) {
-    // `prior_ratings` and `identities` are keyed by worker, not by an `id` column.
-    if (key === 'prior_ratings' || key === 'identities') continue;
+    // `prior_ratings`, `identities` and `calendar_busy` are keyed by worker, not by an `id`.
+    if (key === 'prior_ratings' || key === 'identities' || key === 'calendar_busy') continue;
     checkUniqueIds(file, rowsOf(key), problems);
   }
 
@@ -442,6 +442,23 @@ function validate(bundle: TenantBundle, problems: string[]): void {
     problems.push(
       `identities.json: expected exactly one is_default identity, found ${defaults.length}`,
     );
+  }
+
+  // The Google Calendar seam (spec §4). Busy blocks are meetings, never absence: a row here
+  // must point at a real worker and must end after it starts, and that is all it may say.
+  for (const block of rowsOf('calendar_busy')) {
+    const workerRef = block.worker_id;
+    if (typeof workerRef !== 'string' || !workerIds.has(workerRef)) {
+      problems.push(`calendar_busy.json: unknown worker_id "${String(workerRef)}"`);
+    }
+    const start = block.start_at;
+    const end = block.end_at;
+    if (typeof start !== 'string' || typeof end !== 'string' || !(start < end)) {
+      problems.push(
+        `calendar_busy.json: ${String(workerRef)} has a block that does not end after it ` +
+          `starts ("${String(start)}" → "${String(end)}")`,
+      );
+    }
   }
 
   const bandKeys = new Set(

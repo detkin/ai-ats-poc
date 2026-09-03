@@ -15,6 +15,12 @@ import { ANCHOR_DATE, DEFAULT_SEED, generateTenant } from '#lib/fixtures/generat
 import type { TenantBundle } from '#lib/fixtures/generate.ts';
 import { PINNED } from '#lib/fixtures/gen/catalog.ts';
 import { INJECTED_RESUME_CANDIDATES, REQ_IDS } from '#lib/fixtures/gen/hiring.ts';
+import {
+  STAFF_ENG_DECLINER,
+  STAFF_ENG_PANEL,
+  STAFF_ENG_SLOT,
+  STAFF_ENG_SUBSTITUTE,
+} from '#lib/fixtures/gen/calendar.ts';
 import { PRIOR_CYCLE_NAME } from '#lib/fixtures/gen/ratings.ts';
 import { REVIEW_CYCLE_ID } from '#lib/fixtures/gen/state.ts';
 
@@ -396,5 +402,61 @@ describe('scenario requirement: the seeded review cycle', () => {
     expect(tenant.state.scorecards).toEqual([]);
     expect(tenant.state.review_submissions).toEqual([]);
     expect(tenant.state.anomalies).toEqual([]);
+  });
+});
+
+describe('scenario requirement: the Google Calendar seam (loop 2)', () => {
+  const busy = tenant.calendar_busy;
+
+  it('covers the week of 2026-09-07 and points only at real workers', () => {
+    expect(busy.length).toBeGreaterThan(0);
+    const workerIds = new Set(tenant.workers.map((worker) => worker.id));
+    for (const block of busy) {
+      expect(workerIds.has(block.worker_id)).toBe(true);
+      expect(block.start_at < block.end_at).toBe(true);
+      expect(block.start_at >= '2026-09-07').toBe(true);
+      expect(block.start_at < '2026-09-12').toBe(true);
+    }
+  });
+
+  it('says nothing about absence: no block falls on Labor Day', () => {
+    // 2026-09-07 is a holiday at SF, NYC and Remote (US); absence answers that, not gcal.
+    expect(busy.filter((block) => block.start_at.startsWith('2026-09-07'))).toEqual([]);
+  });
+
+  it('blocks one panel member out for the whole of 2026-09-08', () => {
+    const tuesday = busy.filter(
+      (block) => block.start_at.startsWith('2026-09-08') && block.end_at > '2026-09-08T22:00:00Z',
+    );
+    expect(tuesday).toHaveLength(1);
+    expect(STAFF_ENG_PANEL).toContain(tuesday[0]?.worker_id);
+  });
+
+  it('leaves the whole panel free over the chosen 2026-09-09 slot, and the substitute too', () => {
+    const clashes = busy.filter(
+      (block) =>
+        [...STAFF_ENG_PANEL, STAFF_ENG_SUBSTITUTE].includes(block.worker_id) &&
+        block.start_at < STAFF_ENG_SLOT.end_at &&
+        block.end_at > STAFF_ENG_SLOT.start_at,
+    );
+    expect(clashes).toEqual([]);
+  });
+
+  it('names a decliner on the panel and a substitute who is not', () => {
+    expect(STAFF_ENG_PANEL).toContain(STAFF_ENG_DECLINER);
+    expect(STAFF_ENG_PANEL).not.toContain(STAFF_ENG_SUBSTITUTE);
+    const decliner = tenant.workers.find((worker) => worker.id === STAFF_ENG_DECLINER);
+    const substitute = tenant.workers.find((worker) => worker.id === STAFF_ENG_SUBSTITUTE);
+    expect(substitute?.team_id).toBe(decliner?.team_id);
+    expect(substitute?.level_id).toBe(decliner?.level_id);
+    expect(substitute?.status).toBe('ACTIVE');
+    const absent = tenant.absences.filter(
+      (absence) =>
+        absence.worker_id === STAFF_ENG_SUBSTITUTE &&
+        absence.status === 'APPROVED' &&
+        absence.start_date <= '2026-09-09' &&
+        absence.end_date >= '2026-09-09',
+    );
+    expect(absent).toEqual([]);
   });
 });

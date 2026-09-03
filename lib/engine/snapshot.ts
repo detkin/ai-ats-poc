@@ -8,7 +8,13 @@
  *
  * Public interface: `TickSnapshot`, `AvailabilityAnswer`, `UntrustedText`, `LastTick`,
  * `TickPlan`, `PlannedAction` (+ each member type), `PlannedNudgeTask`, `DetectSummary`,
- * `TaskSignal`, `PLANNED_ACTION_KINDS`.
+ * `TaskSignal`, `InterviewDecline`, `PLANNED_ACTION_KINDS`.
+ *
+ * M2 (block B2.1) extends this file **additively**: the interview loop adds optional
+ * snapshot fields and four planned-action kinds, and changes nothing that loop 1 reads.
+ * Note what is deliberately *not* here: there is no `advance_stage` and no `reject` action.
+ * Those are decisions of record, so the only shape they may take is `propose_decision`,
+ * which the executor turns into a `tl_proposed_action` for a named human (spec §9).
  *
  * Conventions this block establishes (see also the report to the orchestrator):
  *  - **`tl_task.external_ref` is the review subject's worker id** for the three review task
@@ -35,16 +41,29 @@ import type {
   TlAnomaly,
   TlCycle,
   TlCycleState,
+  TlInterviewSlot,
   TlNudge,
   TlNudgePolicyCheck,
   TlPacketKind,
   TlProposedAction,
   TlReviewSubmission,
+  TlScorecard,
   TlTask,
   TlTaskKind,
   TlTaskState,
 } from '#lib/types/engine.ts';
-import type { DateISO, Department, InstantISO, Worker, WorkerId } from '#lib/types/tier1.ts';
+import type { Slot } from '#lib/ports/availability.ts';
+import type {
+  Application,
+  DateISO,
+  Department,
+  InstantISO,
+  JobRequisition,
+  Level,
+  LevelId,
+  Worker,
+  WorkerId,
+} from '#lib/types/tier1.ts';
 
 /* ------------------------------------------------------------------ snapshot */
 
@@ -73,6 +92,18 @@ export interface UntrustedText {
   /** Stable pointer to where the text came from, e.g. `resumes/cand_0003.md`. */
   source_ref: string;
   text: string;
+}
+
+/**
+ * An interviewer said no to a booked slot. The CLI reads these from the channel's scripted
+ * replies (`inbox.jsonl`) — free human text, so the *text* is data and only the fact of the
+ * decline reaches the engine (spec §9).
+ */
+export interface InterviewDecline {
+  worker_id: WorkerId;
+  /** The `tl_interview_slot` being declined. */
+  slot_id: string;
+  reason?: string;
 }
 
 /** What the previous tick left behind, for the "diff vs last tick" step (spec §7 step 1). */
@@ -110,6 +141,38 @@ export interface TickSnapshot {
   last_packet_inputs_hash?: string;
   /** `inputs_hash` the calibration packet *would* have now (`calibrationInputsHash`). */
   calibration_inputs_hash?: string;
+
+  /* -------------------------------------------- interview loop (M2, block B2.1) */
+
+  /**
+   * The application under interview. Tier-1, re-read every tick — the engine keys the loop
+   * by its id and never copies its `stage` (spec §3).
+   */
+  application?: Application;
+  /** The requisition behind it; `panelFor` reads its level and hiring manager. */
+  requisition?: JobRequisition;
+  /** Levels by id. Panel and substitute rules compare `rank`, never a level *name*. */
+  levels?: Map<LevelId, Level>;
+  /**
+   * Candidate slots the CLI already obtained from the **composed** Availability port
+   * (`lib/availability/compose.ts`) — Rippling absence first, calendar second. The engine
+   * chooses among them; it never asks a calendar anything itself.
+   */
+  slots?: Slot[];
+  /** Tier-3 shadow slots on record for this application. */
+  interview_slots?: TlInterviewSlot[];
+  /** Tier-3 shadow scorecards; a `submitted` one completes its `submit_scorecard` task. */
+  scorecards?: TlScorecard[];
+  /** Declines observed since the last tick. */
+  declines?: InterviewDecline[];
+  /** `inputs_hash` the debrief packet *would* have now (`debriefInputsHash`). */
+  debrief_inputs_hash?: string;
+  /**
+   * Which decision of record the loop should *propose* once the debrief packet exists.
+   * Defaults to `advance_stage`. The engine expresses no view either way: this only picks
+   * the shape of the proposal a named human then approves or declines (spec §9).
+   */
+  proposed_decision_kind?: 'advance_stage' | 'reject';
 }
 
 /* -------------------------------------------------------------------- detect */
@@ -194,6 +257,14 @@ export interface DetectSummary {
 
 /* ---------------------------------------------------------------- the plan */
 
+/**
+ * Every kind of thing a tick can decide to do. Note the absentees: `advance_stage` and
+ * `reject` are **not** here and never will be — a candidate decision leaves the engine only
+ * as `propose_decision`, which becomes a `tl_proposed_action` (spec §9, asserted in
+ * `tests/engine/interview-plan.test.ts`). `request_scorecard` is absent too, on purpose:
+ * chasing a scorecard is the ordinary `nudge` path over a `submit_scorecard` task, so the
+ * interview loop reuses loop 1's nudging, batching, cadence and absence rules unchanged.
+ */
 export const PLANNED_ACTION_KINDS = [
   'anomaly',
   'complete_task',
@@ -203,6 +274,10 @@ export const PLANNED_ACTION_KINDS = [
   'transition_cycle',
   'refresh_packet',
   'close_cycle',
+  'place_hold',
+  'rebook',
+  'post_change',
+  'propose_decision',
 ] as const;
 export type PlannedActionKind = (typeof PLANNED_ACTION_KINDS)[number];
 
@@ -303,6 +378,50 @@ export interface PlannedAnomaly extends PlannedActionBase {
   rule: string;
 }
 
+/* ------------------------------------------- interview loop (M2, block B2.1) */
+
+/**
+ * Book the panel. The executor calls `availability.placeHold` on the **composed** port —
+ * which refuses if Rippling reports any attendee away, whatever the calendar says — and
+ * writes a `tl_interview_slot` carrying the returned `hold_ref` (spec §4, §8 loop 2).
+ */
+export interface PlannedPlaceHold extends PlannedActionBase {
+  kind: 'place_hold';
+  application_id: string;
+  slot: Slot;
+  /** The panel, in panel order: hiring manager first. */
+  attendee_ids: WorkerId[];
+}
+
+/**
+ * An interviewer declined; a same-team, same-level-rank peer takes their place on the same
+ * slot. A staffing change, not a decision of record: nobody's candidacy moves (spec §9).
+ */
+export interface PlannedRebook extends PlannedActionBase {
+  kind: 'rebook';
+  slot_id: string;
+  declined_worker_id: WorkerId;
+  substitute_worker_id: WorkerId;
+}
+
+/** "The loop posts the change" (spec §8 loop 2) — one message to the summary channel. */
+export interface PlannedPostChange extends PlannedActionBase {
+  kind: 'post_change';
+  text: string;
+}
+
+/**
+ * The one shape a candidate decision may take. The executor writes a `tl_proposed_action`
+ * via `bin/propose.mjs`; a named human decides it in `bin/decide.mjs` and executes the
+ * stage move in Rippling. The engine never advances and never rejects (spec §9).
+ */
+export interface PlannedProposeDecision extends PlannedActionBase {
+  kind: 'propose_decision';
+  decision_kind: 'advance_stage' | 'reject';
+  application_id: string;
+  rationale: string;
+}
+
 export type PlannedAction =
   | PlannedNudge
   | PlannedMoveDueDate
@@ -311,7 +430,11 @@ export type PlannedAction =
   | PlannedRefreshPacket
   | PlannedTransitionCycle
   | PlannedCloseCycle
-  | PlannedAnomaly;
+  | PlannedAnomaly
+  | PlannedPlaceHold
+  | PlannedRebook
+  | PlannedPostChange
+  | PlannedProposeDecision;
 
 /** The output of one tick. `changed: false` is the idempotence proof (spec §10). */
 export interface TickPlan {

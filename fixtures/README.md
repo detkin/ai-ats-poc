@@ -46,6 +46,7 @@ node bin/seed.mjs --dir <p>  # operate on a different fixtures dir (or set TL_FI
 | `holidays.json`            | 9        | US Labor Day and Thanksgiving (per location) + three India holidays.             |
 | `prior_ratings.json`       | 96       | `FY2025 Year-End`, one per worker who started before 2026-01-01.                 |
 | `identities.json`          | 3        | Who the POC can run as. Exactly one is `is_default`.                             |
+| `calendar_busy.json`       | 13       | Google Calendar free/busy for the loop-2 week — the labelled seam (spec §4).     |
 | `resumes/*.md`             | 40       | Untrusted free text (spec §9). Two carry prompt injections.                      |
 | `state/*.json`             | 10 files | Seeded Tier-2/3 state. Only `cycles.json` is non-empty.                          |
 | `state/ledger.jsonl`       | 0 lines  | The append-only ledger starts empty.                                             |
@@ -116,6 +117,42 @@ The full lists are `PINNED.below_band` (`w_0026 w_0043 w_0088 w_0101 w_0111`) an
 `app_0001` → `cand_0001`, `app_0002` → `cand_0002`, `app_0003` → `cand_0003`,
 `app_0004` → `cand_0004`, all `ACTIVE` at stage `Onsite`. All four are returning applicants:
 each also has an earlier application on `req_senior_eng_closed` (`app_0041`–`app_0044`).
+
+### Interview loop rows (loop 2)
+
+Everything the spec §8 loop-2 demo names, in one place. The panel is **derived**, not stored:
+`panelFor(req_staff_eng, …)` takes the hiring manager plus `panel_size − 1` (`tenant/policy.yml`
+sets 4) ACTIVE Platform team members at level rank ≥ 5 — the req is L6, rank 6, and the rule
+admits one level down — in worker-id order. `lib/fixtures/gen/calendar.ts` declares the same
+list as `STAFF_ENG_PANEL` so the fixture calendar and the engine cannot drift, and
+`tests/engine/interview-loop.test.ts` asserts the two agree.
+
+| Role                     | Worker   | Name              | Level / location           | Why they are here                                   |
+| ------------------------ | -------- | ----------------- | -------------------------- | --------------------------------------------------- |
+| Hiring manager           | `w_0007` | Dana Whitfield    | M2 (rank 6), SF, Platform  | `req_staff_eng.hiring_manager_id`; leads the panel. |
+| Recruiter                | `w_0114` | Marcus Oyelaran   | —, SF                      | `req_staff_eng.recruiter_id`; the acting identity.  |
+| Panellist                | `w_0002` | Nikhil Ramanathan | M3 (rank 7), SF, Platform  | Lowest id on the team clearing the rank floor.      |
+| Panellist (**declines**) | `w_0024` | Bo Lindgren       | L5 (rank 5), SF, Platform  | The decline the demo scripts.                       |
+| Panellist                | `w_0025` | Beatriz Cho       | L5 (rank 5), NYC, Platform | Third pick, and the NYC end of the timezone window. |
+| **Substitute**           | `w_0028` | Hassan Barros     | L5 (rank 5), NYC, Platform | Same team, same rank, not on the panel, not away.   |
+
+**The slot: `2026-09-09T17:00:00Z` → `18:00:00Z`** (10:00 Pacific, 13:00 Eastern), on
+application **`app_0001`** (candidate `cand_0001`, `ACTIVE` at `Onsite` on `req_staff_eng`).
+It is the _only_ hour in the week of 2026-09-07 where all four panellists are free, and the
+fixture calendar is built to make that true for a reason a reader can check:
+
+| Day       | Why the panel cannot meet                                                                                                                                               |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mon 09-07 | **Labor Day** at SF and NYC. Absence answers this; `calendar_busy.json` is empty that day, so only Rippling can explain the gap (spec §4: absence is asked first).      |
+| Tue 09-08 | `w_0025` is busy 12:00–23:00Z — no four-person hour exists.                                                                                                             |
+| Wed 09-09 | Free 17:00–18:00Z only; `w_0002`, `w_0007`, `w_0024` and `w_0025` hold every other hour of the shared window. `w_0028` is free then too, so the re-book keeps the time. |
+| Thu 09-10 | Free later in the day, but the 09-09 slot is earlier.                                                                                                                   |
+| Fri 09-11 | `w_0025` is in another interview loop 16:00–20:00Z.                                                                                                                     |
+
+The shared window itself is **16:00–22:00Z**: SF works 09:00–18:00 Pacific (16:00–01:00Z) and
+New York 09:00–18:00 Eastern (13:00–22:00Z), and quiet hours are enforced per location.
+
+`app_0002`–`app_0004` are the same shape on the same req, for a second run of the demo.
 
 ### Silver medalists (loop 4)
 

@@ -187,12 +187,14 @@ describe('the write allowlist is enforced in the adapter', () => {
 
   it('ledgers a throwing call as an error and rethrows it', async () => {
     const runtime = makeRuntime(dataDir);
+    // `w_0009` is on approved PTO across the anchor, so the composed Availability port
+    // refuses the hold however free their calendar looks (spec §4, block B2.1).
     await expect(
       runtime.ports.availability.placeHold(
-        { start_at: ANCHOR_NOW, end_at: ANCHOR_NOW, worker_ids: [] },
-        { title: 'Onsite', attendees: [] },
+        { start_at: ANCHOR_NOW, end_at: '2026-09-02T17:00:00Z', worker_ids: ['w_0009'] },
+        { title: 'Onsite', attendees: ['w_0009'] },
       ),
-    ).rejects.toThrow(/M2/);
+    ).rejects.toThrow(/absent/i);
     const entry = readLedger(dataDir).at(-1);
     expect(entry?.result).toBe('error');
     expect(entry?.function).toBe('placeHold');

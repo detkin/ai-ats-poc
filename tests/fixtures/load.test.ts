@@ -54,6 +54,7 @@ describe('loadTenant on the committed fixtures', () => {
     const manifest = readManifest(committed);
     const files = Object.keys(manifest.files);
     expect(files).toContain('workers.json');
+    expect(files).toContain('calendar_busy.json');
     expect(files).toContain('state/cycles.json');
     expect(files).toContain('state/ledger.jsonl');
     expect(files.filter((file) => file.startsWith('resumes/'))).toHaveLength(40);

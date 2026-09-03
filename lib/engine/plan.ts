@@ -28,6 +28,12 @@
  *   g. every task terminal and every proposal decided → `closing` + `close_cycle`;
  *   h. calibration inputs hash moved → `refresh_packet`.
  *
+ * M2 (block B2.1) adds exactly one thing: after every rule above has run, an **interview**
+ * cycle also runs `planInterviewTick` (`lib/engine/interview-plan.ts`) for the beats only
+ * loop 2 has — book the panel, re-book on a decline, refresh the debrief, propose the stage
+ * decision. Nothing above changed, and a review cycle's plan is byte-identical to M1's:
+ * that is what makes "one engine, two loops" (spec §1 claim 1) a fact rather than a claim.
+ *
  * Idempotence (spec §10): `planTick(applyPlan(s, planTick(s)))` has zero actions.
  *
  * Spec: docs/SPEC.md §7, §8 loop 1, §9, §10; docs/PLAN.md §2.5, §2.6.
@@ -35,6 +41,7 @@
 
 import { detect } from '#lib/engine/detect.ts';
 import { sha256Hex } from '#lib/engine/hash.ts';
+import { mergeInterviewActions, planInterviewTick } from '#lib/engine/interview-plan.ts';
 import { addDays, endOfDay, parseInstant } from '#lib/engine/time.ts';
 import { assertTransition } from '#lib/states/index.ts';
 import type {
@@ -366,10 +373,16 @@ export function planTick(snapshot: TickSnapshot): TickPlan {
     });
   }
 
+  // (i) Loop 2, on the same rules. Reached only when `cycle.type === 'interview'`.
+  const merged =
+    snapshot.cycle.type === 'interview'
+      ? mergeInterviewActions(actions, planInterviewTick(snapshot, detected))
+      : actions;
+
   return {
     tick_id: tickId(snapshot.cycle.id, snapshot.now),
-    actions,
+    actions: merged,
     detected,
-    changed: actions.length > 0,
+    changed: merged.length > 0,
   };
 }

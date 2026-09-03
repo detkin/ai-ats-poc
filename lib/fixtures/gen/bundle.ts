@@ -5,9 +5,9 @@
  * Tier-2/3 state), the JSON file-name maps used by the writer, the loader and the manifest,
  * and the fixture anchor constants.
  *
- * Public interface: `TenantBundle`, `TenantState`, `TIER1_FILES`, `STATE_FILE_BY_KIND`,
- * `STATE_FILES`, `emptyState`, `ANCHOR_NOW`, `ANCHOR_DATE`, `GENERATOR_VERSION`,
- * `DEFAULT_SEED`, `EMAIL_DOMAIN`.
+ * Public interface: `TenantBundle`, `TenantState`, `CalendarBusyRow`, `TIER1_FILES`,
+ * `STATE_FILE_BY_KIND`, `STATE_FILES`, `emptyState`, `ANCHOR_NOW`, `ANCHOR_DATE`,
+ * `GENERATOR_VERSION`, `DEFAULT_SEED`, `EMAIL_DOMAIN`.
  *
  * Note (deviation from docs/PLAN.md §2.8): state files are the *plural* of the `StateKind`
  * discriminator — `state/cycles.json` holds `kind: 'cycle'` records — matching the explicit
@@ -27,6 +27,7 @@ import type {
   HeadcountPosition,
   Holiday,
   Identity,
+  InstantISO,
   JobRequisition,
   LeaveType,
   Level,
@@ -34,6 +35,7 @@ import type {
   PriorRating,
   Team,
   Worker,
+  WorkerId,
 } from '#lib/types/tier1.ts';
 import type {
   TlAnomaly,
@@ -47,6 +49,23 @@ import type {
   TlScorecard,
   TlTask,
 } from '#lib/types/engine.ts';
+
+/**
+ * One meeting-level busy block on a worker's Google Calendar (`calendar_busy.json`).
+ *
+ * **Not Tier 1.** It is the labelled Google Calendar seam of spec §4 — the single
+ * availability signal Rippling's API does not expose — and it lives alongside the Tier-1
+ * files only because the fixtures dir is one directory. `source` is stamped by the adapter
+ * (`lib/adapters/gcal/fixture.ts`), never stored on disk: the file says when somebody is in
+ * a meeting, and it never says whether somebody is *away*. Absence is Rippling's answer.
+ */
+export interface CalendarBusyRow {
+  worker_id: WorkerId;
+  start_at: InstantISO;
+  end_at: InstantISO;
+  /** Human label, for the fixture's own readability. Never used as a scheduling signal. */
+  title?: string;
+}
 
 /** Frozen "now" every fixture date is written relative to (docs/PLAN.md §0). */
 export const ANCHOR_NOW = '2026-09-02T16:00:00Z';
@@ -90,6 +109,8 @@ export interface TenantBundle {
   holidays: Holiday[];
   prior_ratings: PriorRating[];
   identities: Identity[];
+  /** Google Calendar free/busy — the labelled seam (spec §4), not a Rippling entity. */
+  calendar_busy: CalendarBusyRow[];
   /** `resume_ref` (e.g. `resumes/cand_0001.md`) → markdown body. Untrusted content. */
   resumes: Record<string, string>;
   state: TenantState;
@@ -112,6 +133,7 @@ export const TIER1_FILES = {
   holidays: 'holidays.json',
   prior_ratings: 'prior_ratings.json',
   identities: 'identities.json',
+  calendar_busy: 'calendar_busy.json',
 } as const;
 
 export type Tier1FileKey = keyof typeof TIER1_FILES;

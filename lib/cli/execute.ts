@@ -21,6 +21,12 @@
  *   transition_cycle state.update('cycle', { status })
  *   close_cycle      state.update('cycle', { status: 'closed', closed_at })
  *   refresh_packet   packet.mjs's own assemblePacket
+ *   place_hold / rebook / post_change / propose_decision
+ *                    loop 2's actions. Block B2.1 *plans* them; block B2.2 wires them to
+ *                    availability.placeHold, state.update on the slot and its tasks,
+ *                    channel.postChannel and createProposal. Until then they throw rather
+ *                    than no-op: a silently skipped hold would leave a cycle believing a
+ *                    panel is booked when no calendar was ever touched.
  *
  * Public interface: `executePlan`, `ExecutedAction`, `ExecuteContext`.
  *
@@ -239,6 +245,16 @@ export async function executePlan(
           detail: `${action.packet_kind} inputs_hash ${result.packet.inputs_hash.slice(0, 12)}…`,
         });
         break;
+      }
+
+      case 'place_hold':
+      case 'rebook':
+      case 'post_change':
+      case 'propose_decision': {
+        throw new Error(
+          `planned action "${action.kind}" is planned by the interview engine (block B2.1) ` +
+            'but is not wired to the ports yet; block B2.2 executes it.',
+        );
       }
 
       default: {

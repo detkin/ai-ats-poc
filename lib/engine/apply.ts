@@ -12,6 +12,12 @@
  *      **one DM per recipient** (D17): one `message_ref` shared by one `tl_nudge` per
  *      bundled task, each moving its own task to `nudged` with its own `attempt_n`.
  *
+ * M2 (block B2.1) adds reference implementations for loop 2's actions: `place_hold` creates
+ * the `tl_interview_slot` the executor will carry the real `hold_ref` on, `rebook` swaps one
+ * interviewer on that slot **and moves their tasks to the stand-in**, `post_change` changes
+ * no state at all (it is a message), and `propose_decision` writes a `tl_proposed_action` —
+ * the only shape a candidate decision may take (spec §9).
+ *
  * Public interface: `applyPlan(snapshot, plan) -> TickSnapshot`.
  *
  * Every state change goes through `assertTransition` (`templates/loop-states.yml`), so a
@@ -26,6 +32,7 @@ import type { PlannedAction, TickPlan, TickSnapshot } from '#lib/engine/snapshot
 import type {
   TlAnomaly,
   TlCycle,
+  TlInterviewSlot,
   TlNudge,
   TlProposedAction,
   TlTask,
@@ -55,6 +62,9 @@ export function applyPlan(snapshot: TickSnapshot, plan: TickPlan): TickSnapshot 
   const nudges: TlNudge[] = [...snapshot.nudges];
   const proposals: TlProposedAction[] = [...snapshot.proposals];
   const anomalies: TlAnomaly[] = [...(snapshot.anomalies ?? [])];
+  const interviewSlots: TlInterviewSlot[] = (snapshot.interview_slots ?? []).map((slot) => ({
+    ...slot,
+  }));
   let cycle: TlCycle = { ...snapshot.cycle };
   let packetHash = snapshot.last_packet_inputs_hash;
   let seq = 0;
@@ -158,6 +168,70 @@ export function applyPlan(snapshot: TickSnapshot, plan: TickPlan): TickSnapshot 
         packetHash = action.inputs_hash;
         return;
       }
+      case 'place_hold': {
+        // The executor calls `availability.placeHold` and stores the ref it gets back; the
+        // placeholder here is deterministic so idempotence is testable without a calendar.
+        interviewSlots.push({
+          id: nextId('interview_slot'),
+          created_at: now,
+          updated_at: now,
+          created_by: actor,
+          shadow: true,
+          real_ref: action.application_id,
+          application_id: action.application_id,
+          interviewer_worker_ids: [...action.attendee_ids],
+          start_at: action.slot.start_at,
+          end_at: action.slot.end_at,
+          hold_ref: `hold_${plan.tick_id.slice(0, 8)}`,
+          status: 'held',
+        });
+        return;
+      }
+      case 'rebook': {
+        const index = interviewSlots.findIndex((slot) => slot.id === action.slot_id);
+        const slot = interviewSlots[index];
+        if (slot === undefined) return;
+        interviewSlots[index] = {
+          ...slot,
+          interviewer_worker_ids: slot.interviewer_worker_ids.map((id) =>
+            id === action.declined_worker_id ? action.substitute_worker_id : id,
+          ),
+          updated_at: now,
+        };
+        // The stand-in inherits the work: attending, and the scorecard afterwards.
+        for (const task of tasks.values()) {
+          if (task.participant_worker_id !== action.declined_worker_id) continue;
+          if (task.external_ref !== slot.application_id) continue;
+          if (task.kind !== 'attend_interview' && task.kind !== 'submit_scorecard') continue;
+          tasks.set(task.id, {
+            ...task,
+            participant_worker_id: action.substitute_worker_id,
+            updated_at: now,
+          });
+        }
+        return;
+      }
+      case 'post_change': {
+        // A message to the summary channel. It changes no record, which is why re-running a
+        // converged plan cannot post it twice: the `rebook` that produces it is gated on the
+        // declining interviewer still being on the slot.
+        return;
+      }
+      case 'propose_decision': {
+        proposals.push({
+          id: nextId('proposed_action'),
+          created_at: now,
+          updated_at: now,
+          created_by: actor,
+          cycle_id: cycle.id,
+          kind: action.decision_kind,
+          payload: { application_id: action.application_id },
+          rationale: action.rationale,
+          evidence_refs: action.evidence_refs,
+          status: 'proposed',
+        });
+        return;
+      }
       default: {
         // Exhaustiveness: a new PlannedAction kind must be handled here.
         const never: never = action;
@@ -179,6 +253,7 @@ export function applyPlan(snapshot: TickSnapshot, plan: TickPlan): TickSnapshot 
     nudges,
     proposals,
     anomalies,
+    interview_slots: interviewSlots,
     last_tick: { at: now, task_states: taskStates },
   };
   if (packetHash === undefined) delete next.last_packet_inputs_hash;

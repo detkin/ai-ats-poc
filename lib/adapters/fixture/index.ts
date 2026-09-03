@@ -6,6 +6,12 @@
  * every fixture adapter and error. Nothing here is ledgered: `lib/adapters/index.ts` wraps
  * the result before any caller sees it.
  *
+ * The Availability port is **composed** (block B2.1): Rippling absence
+ * (`FixtureAvailabilityAdapter`) is authoritative and the Google Calendar free/busy fixture
+ * (`GcalFixtureAdapter`) is a secondary signal behind it, so a free calendar can never book
+ * somebody Rippling reports as away (spec §4). Callers see one `AvailabilityPort`; there is
+ * no path from a CLI to the calendar that skips the absence check.
+ *
  * Public interface: `buildFixturePorts`, `FixturePortsOptions`, and re-exports of the seven
  * adapters and their errors.
  *
@@ -19,6 +25,8 @@ import { FixtureChannelAdapter } from '#lib/adapters/fixture/channel.ts';
 import { FixtureGraphAdapter } from '#lib/adapters/fixture/graph.ts';
 import { FixtureLedgerAdapter } from '#lib/adapters/fixture/ledger.ts';
 import { FixtureStateAdapter } from '#lib/adapters/fixture/state.ts';
+import { GcalFixtureAdapter } from '#lib/adapters/gcal/index.ts';
+import { composeAvailability } from '#lib/availability/compose.ts';
 import { loadTenant } from '#lib/fixtures/index.ts';
 import type { TenantBundle } from '#lib/fixtures/index.ts';
 import type { TenantPolicy } from '#lib/policy/index.ts';
@@ -87,7 +95,16 @@ export function buildFixturePorts(options: FixturePortsOptions): Ports {
     graph: new FixtureGraphAdapter(bundle, options.actorWorkerId),
     ats: new FixtureAtsAdapter(bundle, options.fixturesDir),
     bands: new FixtureBandsAdapter(bundle),
-    availability: new FixtureAvailabilityAdapter(bundle, options.policy),
+    availability: composeAvailability(
+      new FixtureAvailabilityAdapter(bundle, options.policy),
+      new GcalFixtureAdapter({
+        fixturesDir: options.fixturesDir,
+        dataDir: options.dataDir,
+        actorWorkerId: options.actorWorkerId,
+        now: options.now,
+        rows: bundle.calendar_busy,
+      }),
+    ),
     channel: new FixtureChannelAdapter(options.dataDir, options.actorWorkerId, options.now),
     state: new FixtureStateAdapter(
       options.dataDir,

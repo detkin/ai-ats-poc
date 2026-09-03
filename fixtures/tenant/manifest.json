@@ -63,6 +63,10 @@
       "count": 3,
       "sha256": "e211166a7f19e681563debd8cc007c96c631e5c44a3beb3ad17504e4996cdbed"
     },
+    "calendar_busy.json": {
+      "count": 13,
+      "sha256": "df024b2d60a92a983eb2a2f2906204383490bfb2208d6c2a671e44ea778d354f"
+    },
     "resumes/cand_0001.md": {
       "count": 1,
       "sha256": "1681af87c49d8625104ff31bb0a7ec350a9f20ee85240f30de05cd1f86df15eb"

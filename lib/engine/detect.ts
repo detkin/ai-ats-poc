@@ -11,6 +11,12 @@
  * (docs/DECISIONS.md D17). A task at the attempts cap drops out of its owner's bundle; a
  * recipient inside the cadence window hears nothing at all.
  *
+ * M2 (block B2.1) widens exactly one thing here: "has the record that completes this task
+ * appeared?" now also looks at `tl_scorecard` for `submit_scorecard` tasks, so the interview
+ * loop completes tasks through the *same* generic rule loop 1 uses. `TaskSignal.submission_id`
+ * is the id of whichever shadow record completed the task — a review submission or a
+ * scorecard — and `plan.ts` rule (b) is unchanged.
+ *
  * Public interface:
  *   detect(snapshot: TickSnapshot): DetectSummary
  *   isRecipientInCycle(snapshot, workerId): boolean
@@ -33,7 +39,7 @@ import type {
   TaskSignal,
   TickSnapshot,
 } from '#lib/engine/snapshot.ts';
-import type { TlReviewSubmission, TlTask } from '#lib/types/engine.ts';
+import type { TlReviewSubmission, TlScorecard, TlTask } from '#lib/types/engine.ts';
 import type { WorkerId } from '#lib/types/tier1.ts';
 
 export type { AnomalyFinding, DetectSummary, TaskSignal } from '#lib/engine/snapshot.ts';
@@ -80,6 +86,30 @@ function submissionFor(
 }
 
 /**
+ * Index submitted scorecards by `application|interviewer` — the pair that identifies the one
+ * record a `submit_scorecard` task is waiting for (spec §6, Tier 3). Same shape and the same
+ * first-writer-wins rule as `indexSubmissions`, so the two completion paths behave alike.
+ */
+function indexScorecards(scorecards: readonly TlScorecard[]): Map<string, TlScorecard> {
+  const index = new Map<string, TlScorecard>();
+  for (const scorecard of scorecards) {
+    if (scorecard.status !== 'submitted') continue;
+    const key = `${scorecard.application_id}|${scorecard.interviewer_worker_id}`;
+    if (!index.has(key)) index.set(key, scorecard);
+  }
+  return index;
+}
+
+/**
+ * The submitted scorecard that completes a `submit_scorecard` task, if it exists.
+ * `tl_task.external_ref` on an interview task is the **application id** (block B2.1).
+ */
+function scorecardFor(task: TlTask, index: Map<string, TlScorecard>): TlScorecard | undefined {
+  if (task.kind !== 'submit_scorecard' || task.external_ref === null) return undefined;
+  return index.get(`${task.external_ref}|${task.participant_worker_id}`);
+}
+
+/**
  * The latest `nudged_at` per recipient across the whole cycle. The cadence gap is measured
  * per **person**, not per task (docs/DECISIONS.md D17): somebody who owes four reviews hears
  * from the engine once per `nudge_min_gap_hours`, not four times.
@@ -100,6 +130,7 @@ function signalFor(
   snapshot: TickSnapshot,
   task: TlTask,
   submissionIndex: Map<string, TlReviewSubmission>,
+  scorecardIndex: Map<string, TlScorecard>,
   lastNudgedAt: string | undefined,
 ): TaskSignal {
   const { policy, now } = snapshot;
@@ -108,7 +139,9 @@ function signalFor(
   const daysPastDue = fullDaysBetween(task.due_at, now);
   const overdue = parseInstant(task.due_at) < parseInstant(now);
   const daysUntilDue = fullDaysBetween(now, task.due_at);
-  const submission = submissionFor(task, submissionIndex);
+  // The record whose arrival completes the task: a review submission (loop 1) or a
+  // scorecard (loop 2). One rule, two loops — which is claim 1 of the spec.
+  const submission = submissionFor(task, submissionIndex) ?? scorecardFor(task, scorecardIndex);
   const previous = snapshot.last_tick?.task_states[task.id];
 
   const signal: TaskSignal = {
@@ -167,10 +200,17 @@ function findAnomalies(snapshot: TickSnapshot): AnomalyFinding[] {
  */
 export function detect(snapshot: TickSnapshot): DetectSummary {
   const submissionIndex = indexSubmissions(snapshot.submissions);
+  const scorecardIndex = indexScorecards(snapshot.scorecards ?? []);
   const tasks = [...snapshot.tasks].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const lastNudged = latestNudgeByRecipient(snapshot.tasks);
   const signals = tasks.map((task) =>
-    signalFor(snapshot, task, submissionIndex, lastNudged.get(task.participant_worker_id)),
+    signalFor(
+      snapshot,
+      task,
+      submissionIndex,
+      scorecardIndex,
+      lastNudged.get(task.participant_worker_id),
+    ),
   );
 
   const byTask = new Map<string, TaskSignal>();

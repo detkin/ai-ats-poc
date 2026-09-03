@@ -4,8 +4,9 @@
  * Owns: `generateTenant(seed)`, a pure function that assembles the Acme Robotics fixture
  * tenant — ~120 workers across six departments, comp bands, a headcount plan, four
  * requisitions, forty candidates with résumés, an absence table anchored on
- * 2026-09-02, prior-cycle ratings and one configured review cycle. It performs no I/O;
- * `lib/fixtures/write.ts` puts the result on disk and `lib/fixtures/load.ts` reads it back.
+ * 2026-09-02, prior-cycle ratings, the Google Calendar free/busy seam (spec §4) and one
+ * configured review cycle. It performs no I/O; `lib/fixtures/write.ts` puts the result on
+ * disk and `lib/fixtures/load.ts` reads it back.
  *
  * Determinism is the contract: the PRNG is consumed in exactly the order below, so two
  * calls with the same seed are deep-equal and `bin/seed.mjs --verify` can hash-compare a
@@ -20,6 +21,7 @@
 import { DEFAULT_SEED } from '#lib/fixtures/gen/bundle.ts';
 import type { TenantBundle } from '#lib/fixtures/gen/bundle.ts';
 import { generateBands } from '#lib/fixtures/gen/bands.ts';
+import { generateCalendarBusy } from '#lib/fixtures/gen/calendar.ts';
 import { LEVELS, LOCATIONS } from '#lib/fixtures/gen/catalog.ts';
 import {
   HEADCOUNT_POSITIONS,
@@ -83,6 +85,7 @@ export function generateTenant(seed: number = DEFAULT_SEED): TenantBundle {
       ...identity,
       permissions: [...identity.permissions],
     })),
+    calendar_busy: generateCalendarBusy(),
     resumes,
     state: generateSeedState(),
   };

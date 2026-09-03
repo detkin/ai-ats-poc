@@ -8,6 +8,11 @@
  *   runtime.raw    — the same ports, unwrapped. For read-only reconciliation (verify-loops,
  *                    audit) where ledgering the audit would bury the thing being audited.
  *
+ * Availability is composed in both modes (block B2.1): Rippling absence is authoritative and
+ * the Google Calendar free/busy signal sits behind it — the fixture calendar on fixtures, the
+ * not-connected stub on `rippling`. A caller therefore cannot reach a calendar without the
+ * absence check in front of it (spec §4).
+ *
  * Acting identity (spec §9, docs/QUESTIONS.md Q1): `TL_ACTOR` when set, otherwise the
  * `is_default` row in the fixture tenant's `identities.json` (the HRBP). Permissions come
  * from that identity and land in `permission_context` on every ledger line. The engine never
@@ -25,7 +30,9 @@ import { join } from 'node:path';
 import { buildFixturePorts } from '#lib/adapters/fixture/index.ts';
 import { ActorNotFoundError } from '#lib/adapters/fixture/graph.ts';
 import { ledgered } from '#lib/adapters/ledgered.ts';
+import { GcalStubAdapter } from '#lib/adapters/gcal/index.ts';
 import { buildRipplingPorts } from '#lib/adapters/rippling/index.ts';
+import { composeAvailability } from '#lib/availability/compose.ts';
 import { loadConfig, now as clockNow } from '#lib/config.ts';
 import type { Config } from '#lib/config.ts';
 import { loadTenant } from '#lib/fixtures/index.ts';
@@ -77,6 +84,24 @@ export {
   buildRipplingPorts,
   codemode,
 } from '#lib/adapters/rippling/index.ts';
+export {
+  CALENDAR_BUSY_FILE,
+  GCAL_BACKING,
+  GCAL_QUESTION_REF,
+  GcalFixtureAdapter,
+  GcalNotConnectedError,
+  GcalStubAdapter,
+  HOLDS_FILENAME,
+  readCalendarBusy,
+} from '#lib/adapters/gcal/index.ts';
+export type { GcalFixtureOptions, HoldLine } from '#lib/adapters/gcal/index.ts';
+export {
+  AbsenceWinsError,
+  MAX_CANDIDATE_SLOTS,
+  SLOT_GRID_MINUTES,
+  composeAvailability,
+} from '#lib/availability/compose.ts';
+export type { AbsenceAuthority, ComposeOptions } from '#lib/availability/compose.ts';
 
 /** Everything one process needs to run a tick, built once. */
 export interface Runtime {
@@ -133,6 +158,19 @@ export function resolveActor(bundle: TenantBundle, config: Config): ActorContext
 }
 
 /**
+ * The `rippling` port set, with availability composed over the not-connected calendar stub.
+ * Every method still throws; the point is that the *shape* is the same in both modes, so a
+ * caller cannot depend on a seam that only exists on fixtures.
+ */
+function ripplingPorts(): Ports {
+  const ports = buildRipplingPorts();
+  return {
+    ...ports,
+    availability: composeAvailability(ports.availability, new GcalStubAdapter()),
+  };
+}
+
+/**
  * Build the runtime for `config.adapter`.
  *
  * ```ts
@@ -159,7 +197,7 @@ export function buildRuntime(config: Config = loadConfig(), options: RuntimeOpti
 
   const raw: Ports =
     bundle === undefined
-      ? buildRipplingPorts()
+      ? ripplingPorts()
       : buildFixturePorts({
           fixturesDir: config.fixturesDir,
           dataDir: config.dataDir,
