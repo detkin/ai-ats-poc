@@ -31,6 +31,22 @@
  *                     way `advance_stage` or `reject` can enter the system (spec §9). There is
  *                     no stage write anywhere in this file, and there is no port that offers one.
  *
+ * ## Two re-books in one tick compose (defect M2-D2)
+ *
+ * A tick can carry two declines, and then it plans two `rebook`s against the same slot. Each
+ * one writes the whole `interviewer_worker_ids` array, so if both are computed from the
+ * snapshot's pre-tick copy the second silently undoes the first: the slot ends up naming a
+ * worker whose tasks and scorecard have moved to somebody else, and a panellist on the slot
+ * holds neither. `InterviewExecuteContext` therefore carries **live** `slots` and `scorecards`
+ * maps — exactly like the `tasks` map already worked — which every executor updates in place,
+ * so each action reads the state the previous one left. `lib/engine/apply.ts` composes for the
+ * same reason (it folds over its own running arrays); this makes the real executor agree.
+ *
+ * The alternative — planning at most one `rebook` per slot per tick and letting the next tick
+ * take the second decline — was rejected: it leaves the corrupting write in place for anyone
+ * who ever plans two, delays re-staffing by a whole tick, and would have to be re-litigated
+ * for every future action that writes a list.
+ *
  * Spec: docs/SPEC.md §4, §6, §7 step 2, §8 loop 2, §9; docs/PLAN.md §5 block B2.2.
  */
 
@@ -62,7 +78,7 @@ import type {
   PlannedRebook,
   TickSnapshot,
 } from '#lib/engine/index.ts';
-import type { TlCycle, TlScorecard, TlTask } from '#lib/types/engine.ts';
+import type { TlCycle, TlInterviewSlot, TlScorecard, TlTask } from '#lib/types/engine.ts';
 import type { Worker, WorkerId } from '#lib/types/tier1.ts';
 
 /** What every loop-2 executor needs from the tick that is running it. */
@@ -74,6 +90,10 @@ export interface InterviewExecuteContext {
   workers: Map<WorkerId, Worker>;
   /** The tick's live task map; executors update it in place so later actions see the change. */
   tasks: Map<string, TlTask>;
+  /** The tick's live Tier-3 slots, by id. Two re-books in one tick compose through this. */
+  slots: Map<string, TlInterviewSlot>;
+  /** The tick's live Tier-3 scorecards, by id. Re-keyed in place by `rebook`. */
+  scorecards: Map<string, TlScorecard>;
 }
 
 /** The application the cycle is about, or a domain failure naming the cycle. */
@@ -125,6 +145,7 @@ export async function executePlaceHold(
     'interview_slot',
     interviewSlotFor(application, panel, action.slot, hold.hold_ref),
   );
+  context.slots.set(slot.id, slot);
 
   const created: TlTask[] = [];
   for (const task of interviewTasksFor(cycle, application, panel, action.slot, rt.policy)) {
@@ -134,7 +155,9 @@ export async function executePlaceHold(
   }
   const cards: TlScorecard[] = [];
   for (const card of scorecardsFor(application, panel)) {
-    cards.push(await rt.ports.state.create('scorecard', card));
+    const record = await rt.ports.state.create('scorecard', card);
+    context.scorecards.set(record.id, record);
+    cards.push(record);
   }
 
   const scorecardDue =
@@ -190,12 +213,20 @@ export async function executeRebook(
   context: InterviewExecuteContext,
   action: PlannedRebook,
 ): Promise<ExecutedAction> {
-  const { rt, snapshot, tasks } = context;
+  const { rt, tasks, slots, scorecards } = context;
+  // The slot as this tick has left it, not as the snapshot found it: a second re-book in the
+  // same tick must swap its interviewer out of the panel the first one wrote (M2-D2).
   const slot =
-    (snapshot.interview_slots ?? []).find((row) => row.id === action.slot_id) ??
-    (await rt.ports.state.get('interview_slot', action.slot_id));
+    slots.get(action.slot_id) ?? (await rt.ports.state.get('interview_slot', action.slot_id));
   if (slot === null || slot === undefined) {
     throw new CliError('SLOT_NOT_FOUND', `no interview slot with id "${action.slot_id}".`);
+  }
+  if (!slot.interviewer_worker_ids.includes(action.declined_worker_id)) {
+    throw new CliError(
+      'INTERVIEWER_NOT_ON_SLOT',
+      `worker "${action.declined_worker_id}" is not on interview slot "${slot.id}", so there ` +
+        'is nothing to re-book; the panel changed under this plan.',
+    );
   }
 
   const updated = await rt.ports.state.update('interview_slot', slot.id, {
@@ -203,7 +234,10 @@ export async function executeRebook(
       id === action.declined_worker_id ? action.substitute_worker_id : id,
     ),
   });
+  slots.set(updated.id, updated);
 
+  // Only this decliner's rows move: `movesOnRebook` / `rekeysOnRebook` key on the worker who
+  // is dropping out, and both maps are live, so an earlier re-book's rows are already theirs.
   const moved: string[] = [];
   for (const task of [...tasks.values()]) {
     if (!movesOnRebook(task, slot.application_id, action.declined_worker_id)) continue;
@@ -217,11 +251,12 @@ export async function executeRebook(
   // The record that completes the moved scorecard task follows the person who now owes it —
   // the same rule `applyPlan` applies to the pure snapshot (docs/DECISIONS.md D23).
   let rekeyed = 0;
-  for (const card of snapshot.scorecards ?? []) {
+  for (const card of [...scorecards.values()]) {
     if (!rekeysOnRebook(card, slot.application_id, action.declined_worker_id)) continue;
-    await rt.ports.state.update('scorecard', card.id, {
+    const next = await rt.ports.state.update('scorecard', card.id, {
       interviewer_worker_id: action.substitute_worker_id,
     });
+    scorecards.set(next.id, next);
     rekeyed += 1;
   }
 

@@ -141,7 +141,9 @@ its place, a `tl_anomaly` is recorded, and the scorecard still counts as filed.
 
 The tick after the debrief is assembled writes one `tl_proposed_action` of kind
 `advance_stage`, `status: proposed`, payload `{ "application_id": "app_0001" }`, with the
-cycle, the application, the slot and every scorecard as `evidence_refs`. Nothing moved. Tell
+cycle, the application, the slot, the debrief `tl_packet` and every scorecard as
+`evidence_refs` — the packet is there so somebody auditing the evidence can read the debrief
+the proposal was assembled from, not only the write-ups behind it. Nothing moved. Tell
 the recruiter three things:
 
 1. What the panel filed — by scorecard id, not by paraphrase.
@@ -315,7 +317,8 @@ of the candidate's name.
 TL_NOW=2026-09-11T21:00:00Z node bin/tick.mjs --cycle <cycle id> --json
 ```
 
-Exactly one `propose_decision`: kind `advance_stage`, status `proposed`, seven evidence refs.
+Exactly one `propose_decision`: kind `advance_stage`, status `proposed`, eight evidence refs
+(cycle, application, slot, debrief packet, four scorecards).
 Nothing else moved, and `grep` will find no `"stage"` in any file under `state/`.
 
 ```sh

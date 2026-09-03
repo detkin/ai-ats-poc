@@ -168,6 +168,13 @@ export interface TickSnapshot {
   /** `inputs_hash` the debrief packet *would* have now (`debriefInputsHash`). */
   debrief_inputs_hash?: string;
   /**
+   * Id of the newest packet on record for this cycle — the debrief, for an interview loop.
+   * `propose_decision` cites it, so an auditor walking `evidence_refs` can reach the packet
+   * the proposal was assembled from (defect M2-D4). Paired with `last_packet_inputs_hash`:
+   * the hash says *whether* the packet is current, the id says *which* packet it is.
+   */
+  last_packet_id?: string;
+  /**
    * Which decision of record the loop should *propose* once the debrief packet exists.
    * Defaults to `advance_stage`. The engine expresses no view either way: this only picks
    * the shape of the proposal a named human then approves or declines (spec §9).

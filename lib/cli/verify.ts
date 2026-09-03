@@ -27,7 +27,7 @@
  *  7. `decisions_by_active_worker`— a decided proposal names a decider, and that worker is
  *     ACTIVE.
  *
- * Loop 2 adds three (block B2.2):
+ * Loop 2 adds four (blocks B2.2 and B2.4):
  *
  *  8. `interview_slot_held`       — every `tl_interview_slot` carrying a `hold_ref` has a
  *     matching line in `holds.jsonl` **and** an `availability.placeHold` `ok` line in the
@@ -42,6 +42,14 @@
  *     moves it. A `stage` key appearing on engine state would mean a shadow pipeline had
  *     started, and this rule fails the moment one does. It is checked on the whole runtime
  *     state, not per cycle.
+ * 11. `interview_panel_reconciles` — for every `tl_interview_slot` that is not cancelled, the
+ *     people holding `attend_interview` / `submit_scorecard` tasks and `tl_scorecard` records
+ *     for that application are **exactly** the slot's `interviewer_worker_ids`, one of each
+ *     per panellist (block B2.4). A re-book rewrites three places at once — the slot, the
+ *     tasks and the scorecard — and a tick that re-books twice used to leave them disagreeing
+ *     (defect M2-D2): somebody holding the work for a panel they are not on, somebody on the
+ *     panel holding none of it. Rules 8 and 9 both passed on exactly that state, which is why
+ *     this one exists: it reconciles the slot against the work, not either against itself.
  *
  * Everything is read through `rt.raw` — verifying must not itself write ledger lines, or the
  * second run would have a different ledger to verify than the first.
@@ -206,6 +214,73 @@ function submittedKeys(submissions: readonly TlReviewSubmission[]): Set<string> 
   return keys;
 }
 
+/** Task kinds a panellist holds exactly one of, per slot they are on. */
+const PANEL_TASK_KINDS = ['attend_interview', 'submit_scorecard'] as const;
+
+/** `worker → how many of these rows they hold`, for one application. */
+function countBy<T>(rows: readonly T[], key: (row: T) => WorkerId): Map<WorkerId, number> {
+  const counts = new Map<WorkerId, number>();
+  for (const row of rows) counts.set(key(row), (counts.get(key(row)) ?? 0) + 1);
+  return counts;
+}
+
+/**
+ * Rule 11. Reconcile one slot's panel against the work keyed to its application: every
+ * panellist holds exactly one task of each kind and exactly one scorecard, and nobody else
+ * holds any of it. The finding names the slot and the workers, because "which worker" is the
+ * first question anyone asks of this failure.
+ */
+function panelFindings(
+  slot: TlInterviewSlot,
+  bundle: CycleBundle,
+): { id: string; detail: string }[] {
+  const findings: { id: string; detail: string }[] = [];
+  const panel = new Set<WorkerId>(slot.interviewer_worker_ids);
+  const cards = bundle.scorecards.filter((card) => card.application_id === slot.application_id);
+  const byKind = new Map<string, Map<WorkerId, number>>(
+    PANEL_TASK_KINDS.map((kind) => [
+      kind,
+      countBy(
+        bundle.tasks.filter(
+          (task) => task.kind === kind && task.external_ref === slot.application_id,
+        ),
+        (task) => task.participant_worker_id,
+      ),
+    ]),
+  );
+  byKind.set(
+    'tl_scorecard',
+    countBy(cards, (card) => card.interviewer_worker_id),
+  );
+
+  for (const [what, counts] of byKind) {
+    // Nothing at all of this kind exists yet (a slot booked by a plan that never ran its
+    // task creation is rule 8's business, not this one).
+    if (counts.size === 0) continue;
+    for (const worker of panel) {
+      const held = counts.get(worker) ?? 0;
+      if (held === 1) continue;
+      findings.push({
+        id: slot.id,
+        detail:
+          held === 0
+            ? `${worker} is on the slot but holds no ${what} for application ${slot.application_id}`
+            : `${worker} holds ${held} ${what} rows for application ${slot.application_id}; a panellist holds one`,
+      });
+    }
+    for (const [worker, held] of counts) {
+      if (panel.has(worker)) continue;
+      findings.push({
+        id: slot.id,
+        detail:
+          `${worker} holds ${held} ${what} row(s) for application ${slot.application_id} but is ` +
+          `not on the slot (panel: ${slot.interviewer_worker_ids.join(', ')})`,
+      });
+    }
+  }
+  return findings;
+}
+
 /**
  * Run every rule over the given cycles.
  * @param cycleId check one cycle; omit for all of them.
@@ -234,6 +309,10 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
       'a done submit_scorecard task has a submitted tl_scorecard',
     ),
     noStage: rule('no_stage_in_engine_state', 'no tl_* record holds an application stage'),
+    panel: rule(
+      'interview_panel_reconciles',
+      'a slot’s interviewers are exactly the people holding its tasks and scorecards',
+    ),
   };
 
   if (cycleId !== undefined && cycles.length === 0) {
@@ -325,6 +404,13 @@ export async function verifyLoops(rt: Runtime, cycleId?: string): Promise<Verify
           detail: `hold "${slot.hold_ref}" has no availability.placeHold ok entry in the ledger`,
         });
       }
+    }
+
+    // 11. the slot, its tasks and its scorecards name the same people
+    for (const slot of bundle.slots) {
+      if (slot.status === 'cancelled') continue;
+      rules.panel.checked += 1;
+      for (const finding of panelFindings(slot, bundle)) rules.panel.findings.push(finding);
     }
 
     for (const task of bundle.tasks) {

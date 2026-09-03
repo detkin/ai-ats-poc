@@ -407,6 +407,9 @@ describe('after the interview', () => {
   });
 });
 
+/** The debrief packet the proposal is assembled from, and must cite (defect M2-D4). */
+const DEBRIEF_PACKET_ID = 'tl_packet_debrief1';
+
 describe('every scorecard is in', () => {
   const tasks = panelTasks().map((task) => ({ ...task, status: 'done' as const }));
   const scorecards = [...STAFF_ENG_PANEL].map((id, index) => scorecard(id, index + 1, 'submitted'));
@@ -417,7 +420,9 @@ describe('every scorecard is in', () => {
       scorecards,
       now: AFTER_SLOT,
       debrief_inputs_hash: 'debrief-hash-1',
-      ...(lastHash === undefined ? {} : { last_packet_inputs_hash: lastHash }),
+      ...(lastHash === undefined
+        ? {}
+        : { last_packet_inputs_hash: lastHash, last_packet_id: DEBRIEF_PACKET_ID }),
     });
 
   it('assembles the debrief packet first, and holds the cycle open to do it', () => {
@@ -437,6 +442,16 @@ describe('every scorecard is in', () => {
     expect(proposal?.kind === 'propose_decision' && proposal.decision_kind).toBe('advance_stage');
     expect(proposal?.kind === 'propose_decision' && proposal.application_id).toBe(application.id);
     expect(proposal?.evidence_refs).toContain('tl_scorecard_0001');
+    // The debrief packet is evidence too: an auditor walking the refs must be able to read
+    // the document the proposal was assembled from, not only the write-ups behind it (M2-D4).
+    expect(proposal?.evidence_refs).toContain(DEBRIEF_PACKET_ID);
+    expect(proposal?.evidence_refs).toEqual([
+      cycle.id,
+      application.id,
+      SLOT_ID,
+      DEBRIEF_PACKET_ID,
+      ...['tl_scorecard_0001', 'tl_scorecard_0002', 'tl_scorecard_0003', 'tl_scorecard_0004'],
+    ]);
     expect(kinds(plan.actions)).not.toContain('close_cycle');
   });
 

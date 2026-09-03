@@ -21,7 +21,8 @@
  *        Nobody who has declined *this* slot can be its stand-in, however many declines the
  *        tick is working through (docs/DECISIONS.md D23);
  *   iii. every scorecard in and the debrief inputs moved → `refresh_packet` kind `debrief`;
- *   iv.  the debrief packet on record is current → **one** `propose_decision`.
+ *   iv.  the debrief packet on record is current → **one** `propose_decision`, citing the
+ *        cycle, the application, the slot, **the debrief packet** and every scorecard.
  *
  * What is not here, on purpose:
  *  - **No `advance_stage`, no `reject`.** A candidate decision leaves the engine only as a
@@ -208,6 +209,10 @@ export function planInterviewTick(
       });
     } else if (!decisionAlreadyProposed(snapshot.proposals, application.id)) {
       const decisionKind = snapshot.proposed_decision_kind ?? 'advance_stage';
+      // The packet the proposal was assembled from is evidence too: without it an auditor
+      // walking `evidence_refs` can reach every scorecard but not the debrief that quoted
+      // them (defect M2-D4). It is absent only when a caller hand-built the snapshot.
+      const packetRefs = snapshot.last_packet_id === undefined ? [] : [snapshot.last_packet_id];
       actions.push({
         kind: 'propose_decision',
         decision_kind: decisionKind,
@@ -218,7 +223,7 @@ export function planInterviewTick(
           'The engine states no view on the candidate and holds no rating: this proposal ' +
           'exists so a named human records the decision, and executes the stage move in ' +
           'Rippling themselves.',
-        evidence_refs: [cycle.id, application.id, active.id, ...scorecardIds],
+        evidence_refs: [cycle.id, application.id, active.id, ...packetRefs, ...scorecardIds],
       });
     }
   }

@@ -311,8 +311,14 @@ export async function buildSnapshot(
     snapshot.scorecards = interview.scorecards;
     snapshot.declines = interview.declines;
     snapshot.debrief_inputs_hash = interview.debrief_inputs_hash;
+    // The packets were already read above, so the id comes from the same list the hash does:
+    // `propose_decision` cites it as evidence (defect M2-D4), and reading `packet` a second
+    // time inside `loadInterviewContext` would only put a duplicate line in the ledger.
     const newest = newestPacketOfKind(packets, 'debrief');
-    if (newest !== undefined) snapshot.last_packet_inputs_hash = newest.inputs_hash;
+    if (newest !== undefined) {
+      snapshot.last_packet_inputs_hash = newest.inputs_hash;
+      snapshot.last_packet_id = newest.id;
+    }
   }
 
   return {

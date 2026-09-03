@@ -511,6 +511,14 @@ describe('the decision is only ever a proposal', () => {
     expect(proposal.status).toBe('proposed');
     expect(proposal.payload['application_id']).toBe('app_0001');
     expect(proposal.evidence_refs.length).toBeGreaterThan(0);
+    // Every scorecard, the slot, the cycle — and the debrief packet the proposal was
+    // assembled from, so the evidence trail reaches the document itself (defect M2-D4).
+    const debrief = (readState<'packet'>(dataDir, 'packets.json') as TlPacket[]).find(
+      (row) => row.cycle_id === cycleId && row.kind === 'debrief',
+    );
+    expect(proposal.evidence_refs).toContain(debrief?.id);
+    expect(proposal.evidence_refs).toContain(slot().id);
+    for (const card of scorecards()) expect(proposal.evidence_refs).toContain(card.id);
 
     // The load-bearing assertion of this whole file: nothing in engine state holds a stage.
     for (const file of [

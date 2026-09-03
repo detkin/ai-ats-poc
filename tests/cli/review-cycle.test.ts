@@ -425,6 +425,7 @@ describe('verify-loops', () => {
       'interview_slot_held',
       'scorecard_task_has_submission',
       'no_stage_in_engine_state',
+      'interview_panel_reconciles',
     ]);
   });
 

@@ -193,6 +193,9 @@ export function applyPlan(snapshot: TickSnapshot, plan: TickPlan): TickSnapshot 
         return;
       }
       case 'rebook': {
+        // Read from the running array, never from the snapshot: two re-books in one plan must
+        // compose, or the second undoes the first (defect M2-D2). `lib/cli/execute-interview.ts`
+        // keeps live record maps for the same reason, so both executors agree.
         const index = interviewSlots.findIndex((slot) => slot.id === action.slot_id);
         const slot = interviewSlots[index];
         if (slot === undefined) return;

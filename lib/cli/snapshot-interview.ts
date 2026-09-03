@@ -37,6 +37,10 @@
  *     `declining`, `can't make` and `cannot make`, and nothing else. Anything vaguer stays a
  *     message a human reads; the engine does not infer intent from prose.
  *
+ * `InterviewContext.declines` carries **every** decline the thread holds against the slot in
+ * force, whether or not its author is still on the panel, deduplicated by author. Who still
+ * needs a stand-in is the engine's question, not this module's — see `declinesOn` below.
+ *
  * A reply whose ref begins `scorecard` is the interviewer's write-up. When the caller asks
  * to `observe`, the matching pending `tl_scorecard` is moved to `submitted` with the reply's
  * ref as its `body_ref` — the body itself is never inlined into state (spec §6). That write
@@ -131,6 +135,7 @@ export interface InterviewContext {
   slots: Slot[];
   interview_slots: TlInterviewSlot[];
   scorecards: TlScorecard[];
+  /** Every decline against the slot in force, panel member or not (`declinesOn`). */
   declines: InterviewDecline[];
   /** Every reply read this tick, for the generic anomaly screen. */
   untrusted: UntrustedText[];
@@ -268,6 +273,35 @@ function availabilityIdsFor(
 }
 
 /**
+ * Every decline this thread carries against the slot in force — **including** one from an
+ * interviewer who has since been swapped off the panel.
+ *
+ * Panel membership is deliberately not a filter here. `planInterviewTick` needs the whole
+ * decline history for the slot to keep a decliner out of its own substitution set; it decides
+ * for itself which decline still needs a re-book, by looking at who is on the slot now
+ * (docs/DECISIONS.md D23). Filtering here is what made a second decline re-book the first
+ * decliner — the person who had already said they cannot make that hour (defect M2-D1).
+ *
+ * One decline per author: a second reply from somebody who has already declined is the same
+ * fact stated twice, and two `rebook` actions for one worker would be a contradiction.
+ */
+function declinesOn(replies: readonly ReplyClassification[], slotId: string): InterviewDecline[] {
+  const declines: InterviewDecline[] = [];
+  const seen = new Set<WorkerId>();
+  for (const reply of replies) {
+    if (!reply.is_decline || reply.worker_id === null) continue;
+    if (seen.has(reply.worker_id)) continue;
+    seen.add(reply.worker_id);
+    declines.push({
+      worker_id: reply.worker_id,
+      slot_id: slotId,
+      reason: `slack reply ${reply.ref}`,
+    });
+  }
+  return declines;
+}
+
+/**
  * Read everything loop 2 needs, through the ports. Sequential on purpose, like
  * `buildSnapshot`: the ledger's line order is then the order the tick asked its questions.
  */
@@ -303,21 +337,7 @@ export async function loadInterviewContext(
     scorecards = await observeScorecards(rt, scorecards, replies, application.id, now);
   }
 
-  const declines: InterviewDecline[] =
-    active === undefined
-      ? []
-      : replies
-          .filter(
-            (reply) =>
-              reply.is_decline &&
-              reply.worker_id !== null &&
-              active.interviewer_worker_ids.includes(reply.worker_id),
-          )
-          .map((reply) => ({
-            worker_id: reply.worker_id as WorkerId,
-            slot_id: active.id,
-            reason: `slack reply ${reply.ref}`,
-          }));
+  const declines: InterviewDecline[] = active === undefined ? [] : declinesOn(replies, active.id);
 
   const panelIds =
     active?.interviewer_worker_ids ??

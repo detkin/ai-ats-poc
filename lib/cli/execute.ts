@@ -49,7 +49,7 @@ import { createProposal } from '#lib/cli/propose.ts';
 import { escalationFacts, ESCALATION_TEMPLATE_ID, renderTemplate } from '#lib/cli/templates.ts';
 import type { Config } from '#lib/config.ts';
 import type { PlannedAction, TickPlan, TickSnapshot } from '#lib/engine/index.ts';
-import type { TlCycle, TlTask } from '#lib/types/engine.ts';
+import type { TlCycle, TlInterviewSlot, TlScorecard, TlTask } from '#lib/types/engine.ts';
 import type { Worker, WorkerId } from '#lib/types/tier1.ts';
 
 /** One line of "what the tick actually did", as the CLI reports it. */
@@ -96,10 +96,18 @@ export async function executePlan(
 ): Promise<ExecutedAction[]> {
   const { plan, workers } = context;
   const tasks = new Map<string, TlTask>(context.snapshot.tasks.map((task) => [task.id, task]));
+  // Loop 2's Tier-3 records are live for the same reason the task map is: two actions in one
+  // tick can touch the same slot, and the second must see what the first wrote (defect M2-D2).
+  const slots = new Map<string, TlInterviewSlot>(
+    (context.snapshot.interview_slots ?? []).map((slot) => [slot.id, slot]),
+  );
+  const scorecards = new Map<string, TlScorecard>(
+    (context.snapshot.scorecards ?? []).map((card) => [card.id, card]),
+  );
   let cycle: TlCycle = context.snapshot.cycle;
   const done: ExecutedAction[] = [];
 
-  /** Built lazily, and always from the *current* cycle record and task map. */
+  /** Built lazily, and always from the *current* cycle record and live record maps. */
   const interviewContext = (): InterviewExecuteContext => ({
     rt,
     config,
@@ -107,6 +115,8 @@ export async function executePlan(
     snapshot: context.snapshot,
     workers,
     tasks,
+    slots,
+    scorecards,
   });
 
   for (const action of plan.actions) {
