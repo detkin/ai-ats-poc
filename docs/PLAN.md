@@ -309,3 +309,14 @@ User direction (2026-09-02): fixtures are right for M0–M2, but the real tenant
 4. Availability: `lookup_absence` for a real worker vs the fixture assumption (`until` inclusive, `source` values).
 5. Retire or confirm each fixture-only assumption: Q2, Q6, spec §12; REST availability for reqs/candidates/applications.
 6. Report pass/fail per call with the raw MCP response shapes (redacted) so the adapter can be corrected in one block.
+
+## 8. B2.6 — Rippling bridge for one clean live run (user direction 2026-09-02)
+
+Scope: no M3. One clean run of the review cycle against the real tenant, file-backed Tier-2 state, and a `docs/LEARNINGS.md`. Findings feeding this block: `docs/testing/live-rippling.md`, D25–D27.
+
+1. **Goal:** `TL_ADAPTER=bridge` runs the unchanged engine and CLIs over Tier-1 data the agent fetched from the Rippling MCP, with provenance, so the review cycle ticks against real people.
+2. **Inputs:** `docs/testing/live-rippling.md` (record shapes), D25–D27, `lib/adapters/fixture/*`, `lib/fixtures/gen/bundle.ts` (file layout), `lib/policy/*`, `lib/doctor/*`.
+3. **Outputs:** `lib/adapters/bridge/{map,import,index}.ts`, `bin/bridge.mjs` (`fetch-plan` prints the exact `codemode.*` calls; `import --from <snapshot.json>` maps into `TL_DATA_DIR/tier1/*.json` + `provenance.json`; `status`), `lib/adapters/index.ts` (`bridge` mode = fixture ports reading `TL_DATA_DIR/tier1`), policy `quiet_hours.default_work_hours`, doctor check `tier1_snapshot`, `modes/live-run.md`, `docs/LEARNINGS.md` skeleton, tests with a synthetic snapshot in the observed MCP shapes.
+4. **Boundaries:** engine untouched; no real Slack sends (outbox); no custom-object writes (Q8).
+5. **Tests:** mapping (timezone per person, nested departments, null level/team fallbacks, present-tense absence → `abs_*` with `until`, missing compensation), import CLI, doctor, a review-cycle run on the bridged snapshot end to end.
+6. **Done:** `make prepush` green; committed `M2.5: rippling bridge`.
